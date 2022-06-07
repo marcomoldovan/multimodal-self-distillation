@@ -12,7 +12,7 @@ from src.models.components.metrics import reciprocal_ranks
 from src.utils import freeze_model
 
 
-class BiEncoderSpeechTextModule(pl.LightningModule):
+class FlatPerceiverData2Vec(pl.LightningModule):
     """
     Example of LightningModule for MNIST classification.
     A LightningModule organizes your PyTorch code into 5 sections:

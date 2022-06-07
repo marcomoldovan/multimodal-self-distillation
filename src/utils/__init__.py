@@ -16,104 +16,13 @@ from transformers import BertModel
 from transformers.models.hubert.modeling_hubert import HubertPositionalConvEmbedding
 
 
-from src.models.components.encoder_components import (
-    BertEmbeddingsWrapper, 
-    HubertConvFeatureExtractorWrapper, 
-    HubertFeatureProjectionWrapper, 
-    BertEncoderWrapper, 
-    HubertModelWithoutFeatureEncoder, 
-    HubertModelWithPooler, 
-    HubertModel, 
-    BertPoolerWrapper, 
-    HubertPooler, 
-    HubertEncoderWrapper
+from src.models.components.perceiver import (
+    PerceiverEncoder
 )
 
 
 count_parameters = lambda model : {'requires_grad':sum(p.numel() for p in model.parameters() if p.requires_grad)/1e6,
                                    'does_not_require_grad':sum(p.numel() for p in model.parameters() if not p.requires_grad)/1e6}
-
-
-def freeze_model(model, trainable_layers=0):
-    """Trainable layers refers to the number of trainable attention layers
-        in the network. If trainable layers > 0, then the corresponding projection
-        head will also be trainable. In case of a Bi-Encoder only components of
-        speech model will be trainable, the text model will always be frozen.
-
-    Args:
-        model (
-            BiEncoderSpeechTextModelWithoutFeatureEncoder,
-            BiEncoderSpeechTextModel,
-            MultiModalSpeechTextEncoder
-            ): The model to be frozen.
-        trainablelayers (int, optional): How many attention layers in the speech or
-            multimodal encoder to train. Defaults to 0.
-    """
-    print(f"Parameters before freezing: {count_parameters(model)}")
-    
-    for _, child in model.named_children():
-        
-        # standard BERT as text model
-        if isinstance(child, BertModel):
-            freeze_module(child)
-        
-        # modules for the multimodal encoder
-        elif isinstance(child, BertEmbeddingsWrapper):
-            freeze_module(child)
-        elif isinstance(child, HubertConvFeatureExtractorWrapper):
-            freeze_module(child)
-        elif isinstance(child, HubertFeatureProjectionWrapper):
-            freeze_module(child)
-        elif isinstance(child, BertEncoderWrapper):          
-            for na, ch in child.named_children():
-                for n, c in ch.named_children():
-                    if isinstance(c, torch.nn.ModuleList):
-                        for i, _ in enumerate(c._modules):
-                                if i < (len(c._modules) - trainable_layers):
-                                    freeze_module(c[i])
-        elif isinstance(child, HubertPooler) or isinstance(child, BertPoolerWrapper):
-            pass
-        
-        # modules for the speech encoder without convolution
-        elif isinstance(child, HubertModelWithoutFeatureEncoder): # done
-            for na, ch in child.named_children():
-                if isinstance(ch, HubertFeatureProjectionWrapper):
-                    freeze_module(ch)
-                elif isinstance(ch, HubertEncoderWrapper):
-                    for n, c in ch.named_children():
-                        for n_enc, c_enc in c.named_children():
-                            if isinstance(c_enc, torch.nn.LayerNorm):
-                                freeze_module(c_enc)
-                            elif isinstance(c_enc, torch.nn.Dropout):
-                                freeze_module(c_enc)
-                            elif isinstance(c_enc, torch.nn.ModuleList):
-                                for i, _ in enumerate(c_enc._modules):
-                                    if i < (len(c_enc._modules) - trainable_layers):
-                                        freeze_module(c_enc[i])
-                elif isinstance(ch, HubertPooler):
-                    pass
-        
-        # modules for the HuBERT speech encoder with convolution and pooler             
-        elif isinstance(child, HubertModelWithPooler): # done
-            for na, ch in child.named_children():
-                if isinstance(ch, HubertModel):
-                    freeze_module(ch.feature_extractor)
-                    freeze_module(ch.feature_projection)
-                    for n, c in ch.encoder.named_children():
-                        if isinstance(c, HubertPositionalConvEmbedding):
-                            freeze_module(c)
-                        elif isinstance(c, torch.nn.LayerNorm):
-                            freeze_module(c)
-                        elif isinstance(c, torch.nn.Dropout):
-                            freeze_module(c)
-                        elif isinstance(c, torch.nn.ModuleList):
-                            for i, _ in enumerate(c._modules):
-                                if i < (len(c._modules) - trainable_layers):
-                                    freeze_module(c[i])
-                if isinstance(ch, HubertPooler):
-                    pass
-                
-    print(f"Parameters after freezing: {count_parameters(model)}")
     
 
 def freeze_module(module):
