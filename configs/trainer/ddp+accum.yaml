@@ -1,0 +1,7 @@
+defaults:
+  - default.yaml
+
+gpus: 4
+strategy: ddp
+accumulate_grad_batches: 4
+sync_batchnorm: True

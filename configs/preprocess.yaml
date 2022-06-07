@@ -1,0 +1,5 @@
+# @package _global_
+
+# specify here default preprocessing configuration
+defaults:
+  - _self_

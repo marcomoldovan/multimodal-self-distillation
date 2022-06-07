@@ -1,0 +1,40 @@
+# https://docs.wandb.ai/guides/integrations/other/hydra
+# https://github.com/ashleve/lightning-hydra-template/issues/58
+
+program: run.py
+
+project: lightning-hydra-template
+
+description: "MNIST wandb sweep"
+
+method: bayes
+
+metric:
+  name: val/acc
+  goal: maximize
+
+parameters:
+  model.lr:
+    distribution: uniform
+    min: 0.0001
+    max: 0.1
+  model.lin1_size:
+    values: [32, 64, 128, 256, 512]
+  model.lin2_size:
+    values: [32, 64, 128, 256, 512]
+  model.lin3_size:
+    values: [32, 64, 128, 256, 512]
+  datamodule.batch_size:
+    values: [32, 64, 128]
+
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 2
+
+command:
+  - ${interpreter}
+  - ${program}
+  - ${args_no_hyphens}
+  - logger=wandb

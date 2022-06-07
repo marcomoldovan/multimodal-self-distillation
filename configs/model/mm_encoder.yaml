@@ -1,0 +1,12 @@
+_target_: src.models.bi_encoder_module.BiEncoderSpeechTextModule
+lr: 0.001
+weight_decay: 0.0005
+criterion: TripletLoss
+trainable_layers: 2
+
+model:
+  _target_: src.models.components.encoder_components.MultiModalSpeechTextEncoder
+  pretrained_embedding_model: google/bert_uncased_L-8_H-256_A-4
+  pretrained_feature_extractor_model: ntu-spml/distilhubert
+  pretrained_transformer_model: google/bert_uncased_L-8_H-256_A-4
+  pooler_output_size: 256

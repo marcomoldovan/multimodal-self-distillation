@@ -1,0 +1,33 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /datamodule: librispeech.yaml
+  - override /model: bi_encoder.yaml
+  - override /callbacks: null
+  - override /logger: null
+  - override /trainer: gpu.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+seed: 12345
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  gradient_clip_val: 0.5
+
+model:
+  lr: 0.002
+  model:
+    train_last_n_speech_layers: 1
+    
+# name of the run determines folder name in logs
+name: "bi-encoder_HS-768_HT-768_LS-2_LT-2"
+
+logger:
+  wandb:
+    tags: ["first hydra run", "${name}"]

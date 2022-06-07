@@ -1,0 +1,17 @@
+_target_: src.datamodules.librispeech_datamodule.LibriSpeechDataModule
+
+data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+train_batch_size: 64
+val_batch_size: 100
+test_batch_size: 100
+load_preprocessed_data: False
+split: train.360
+pin_memory: True
+
+collator:
+  _target_: src.datamodules.components.librispeech_dataset.LibriCollator
+  load_preprocessed_data: False
+  pretrained_speech_model: ntu-spml/distilhubert
+  speech_max_length: 80000
+  pretrained_text_model: google/bert_uncased_L-2_H-768_A-12
+  text_max_length: 32
