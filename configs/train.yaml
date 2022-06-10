@@ -4,7 +4,7 @@
 defaults:
   - _self_
   - datamodule: librispeech.yaml
-  - model: bi_encoder.yaml
+  - model: module.yaml
   - callbacks:
       - default.yaml
       # - wandb.yaml

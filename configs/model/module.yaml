@@ -1,0 +1,21 @@
+_target_: src.models.module.FlatPerceiverData2Vec
+ema_decay: 0.999
+ema_end_decay: 0.9999
+ema_anneal_end_step: 300000
+lr: 0.001
+weight_decay: 0.0005
+
+model:
+  _target_: src.models.components.encoder_components.BiEncoderSpeechTextModel
+  hidden_size: 512
+
+ema:
+  _target_: src.models.components.ema.EMA
+  model: ${model}
+  decay: 0.999
+
+criterion:
+  _target_: src.models.components.criterion.LatentPredictionLoss
+  num_hidden_layers_to_predict: 3
+  reduction: 'mean'
+  beta: 1.0
