@@ -1,4 +1,4 @@
-_target_: src.models.module.FlatPerceiverData2Vec
+_target_: src.models.module.FlatPerceiverData2VecPreTraining
 ema_decay: 0.999
 ema_end_decay: 0.9999
 ema_anneal_end_step: 300000
@@ -6,8 +6,25 @@ lr: 0.001
 weight_decay: 0.0005
 
 model:
-  _target_: src.models.components.encoder_components.BiEncoderSpeechTextModel
-  hidden_size: 512
+  _target_: src.models.components.encoder.PerceiverModel
+  d_model: 0
+  num_latents: 0
+  d_latents: 0
+  num_self_attention_heads: 0
+  num_self_attends_per_block: 0
+  num_cross_attention_heads: 0
+  qk_channels: 0
+  v_channels: 0
+  cross_attention_shape_for_attention: kv
+  self_attention_widening_factor: 1
+  cross_attention_widening_factor: 1
+  attention_probs_dropout_prob: 0.1
+  chunk_size_feed_forward: 0 # found in PretrainedConfig        
+  kv_dim: None
+  use_query_residual: True
+
+  input_preprocessor:
+    _target_: src.models.components.preprocessor.PerceiverPreprocessor
 
 ema:
   _target_: src.models.components.ema.EMA

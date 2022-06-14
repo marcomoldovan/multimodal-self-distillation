@@ -1,14 +1,12 @@
 import math
 import torch
 from torch import nn
-from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Mapping, Optional, Tuple, Union, Dict
 
 from transformers.modeling_outputs import BaseModelOutputWithCrossAttentions
-from transformers.utils import ModelOutput
 from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
-from src.models.components.outputs import ModelOutputs
+from src.models.components.outputs import ForwardPassOutput
 from src.utils import get_logger
 
 
@@ -25,9 +23,13 @@ logger = get_logger(__name__)
 class PerceiverEmbeddings(nn.Module):
     """Construct the latent embeddings."""
 
-    def __init__(self, config):
+    def __init__(
+        self,
+        num_latents: int,
+        d_latents: int,
+        ):
         super().__init__()
-        self.latents = nn.Parameter(torch.randn(config.num_latents, config.d_latents))
+        self.latents = nn.Parameter(torch.randn(num_latents, d_latents))
 
     def forward(self, batch_size: int):
         return self.latents.expand(batch_size, -1, -1)  # Thanks, Phil Wang
@@ -476,4 +478,152 @@ class PerceiverEncoder(nn.Module):
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
             cross_attentions=all_cross_attentions,
+        )
+        
+        
+
+class PerceiverModel(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        num_latents,
+        d_latents,
+        num_self_attention_heads,
+        num_self_attends_per_block,
+        num_cross_attention_heads,
+        qk_channels=None,
+        v_channels=None,
+        cross_attention_shape_for_attention="kv",
+        self_attention_widening_factor=1,
+        cross_attention_widening_factor=1,
+        attention_probs_dropout_prob=0.1,
+        chunk_size_feed_forward=0, # found in PretrainedConfig        
+        kv_dim=None,
+        use_query_residual=True,
+        input_preprocessor: PreprocessorType = None,
+    ):
+        """
+        This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
+        it as a regular PyTorch Module and refer to the PyTorch documentation for all matter related to general usage and
+        behavior.
+        Parameters:
+            config ([`PerceiverConfig`]): Model configuration class with all the parameters of the model.
+                Initializing with a config file does not load the weights associated with the model, only the
+                configuration. Check out the [`~PreTrainedModel.from_pretrained`] method to load the model weights.
+            input_preprocessor (*PreprocessorType*, *optional*):
+                Optional input preprocessor to use. Examples include
+                *transformers.models.perceiver.modeling_perceiver.PerceiverImagePreprocessor*,
+                *transformers.models.perceiver.modeling_perceiver.PerceiverAudioPreprocessor*,
+                *transformers.models.perceiver.modeling_perceiver.PerceiverTextPreprocessor*,
+                *transformers.models.perceiver.modeling_perceiver.PerceiverMultimodalPreprocessor*.
+            Note that you can define your own decoders, preprocessors and/or postprocessors to fit your use-case.
+        """
+        super().__init__()
+        
+        # initialized by Hydra
+        self.input_preprocessor = input_preprocessor
+        
+        self.embeddings = PerceiverEmbeddings(num_latents, d_latents)
+        
+        self.encoder = PerceiverEncoder(
+            self,
+            d_latents=d_latents,
+            num_self_attention_heads=num_self_attention_heads,
+            num_self_attends_per_block=num_self_attends_per_block,
+            num_cross_attention_heads=num_cross_attention_heads,
+            qk_channels=qk_channels,
+            v_channels=v_channels,
+            cross_attention_shape_for_attention=cross_attention_shape_for_attention,
+            self_attention_widening_factor=self_attention_widening_factor,
+            cross_attention_widening_factor=cross_attention_widening_factor,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            chunk_size_feed_forward=chunk_size_feed_forward, # found in PretrainedConfig        
+            kv_dim=input_preprocessor.num_channels if input_preprocessor is not None else d_model,
+            use_query_residual=use_query_residual,
+        )
+        #TODO maybe (!) add post_init() function from PreTrainedModel
+
+
+    def forward(
+        self,
+        inputs: torch.FloatTensor,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> ForwardPassOutput:
+        r"""
+        Args:
+            inputs (`torch.FloatTensor`):
+                Inputs to the perceiver. Can be anything: images, text, audio, video, etc.
+            attention_mask (`torch.FloatTensor` of shape `{0}`, *optional*):
+                Mask to avoid performing attention on padding token indices. Mask values selected in `[0, 1]`:
+                - 1 for tokens that are **not masked**,
+                - 0 for tokens that are **masked**.
+                [What are attention masks?](../glossary#attention-mask)
+            head_mask (`torch.FloatTensor` of shape `(num_heads,)` or `(num_layers, num_heads)`, *optional*):
+                Mask to nullify selected heads of the self-attention modules. Mask values selected in `[0, 1]`:
+                - 1 indicates the head is **not masked**,
+                - 0 indicates the head is **masked**.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under returned
+                tensors for more detail.
+            output_hidden_states (`bool`, *optional*):
+                Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
+                more detail.
+            return_dict (`bool`, *optional*):
+                Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
+        """
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if self.input_preprocessor is not None:
+            inputs, modality_sizes, inputs_without_pos = self.input_preprocessor(inputs)
+        else:
+            modality_sizes = None
+            inputs_without_pos = None
+            if inputs.size()[-1] != self.config.d_model:
+                raise ValueError(
+                    f"Last dimension of the inputs: {inputs.size()[-1]} doesn't correspond to config.d_model: {self.config.d_model}. "
+                    "Make sure to set config.d_model appropriately."
+                )
+
+        batch_size, seq_length, _ = inputs.size()
+
+        # If no attention mask is provided, make them all ones
+        if attention_mask is None:
+            attention_mask = torch.ones(((batch_size, seq_length))) #! removed device call here as per PyTorch Lightning guide, might cause issues
+        # Make the attention mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
+        extended_attention_mask = self.invert_attention_mask(attention_mask)
+
+        # Prepare head mask if needed
+        # 1.0 in head_mask indicate we keep the head
+        # attention_probs has shape bsz x n_heads x N x N
+        # input head_mask has shape [num_heads] or [num_blocks x num_heads]
+        # and head_mask is converted to shape [num_blocks x batch x num_heads x N x N]
+        head_mask = self.get_head_mask(head_mask, self.config.num_blocks * self.config.num_self_attends_per_block)
+
+        embedding_output = self.embeddings(batch_size=batch_size)
+
+        encoder_outputs = self.encoder(
+            embedding_output,
+            attention_mask=None,
+            head_mask=head_mask,
+            inputs=inputs,
+            inputs_mask=extended_attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        sequence_output = encoder_outputs[0]
+
+        return ForwardPassOutput(
+            last_hidden_state=sequence_output,
+            hidden_states=encoder_outputs.hidden_states,
+            attentions=encoder_outputs.attentions,
+            cross_attentions=encoder_outputs.cross_attentions,
         )

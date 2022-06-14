@@ -6,10 +6,14 @@ class ForwardPassOutput:
     def __init__(
         self,
         last_hidden_state: torch.Tensor,
-        hidden_states: torch.Tensor,    
+        hidden_states: torch.Tensor,
+        attentions: torch.Tensor,
+        cross_attentions: torch.Tensor    
     ) -> None:
         self.last_hidden_state = last_hidden_state
         self.hidden_states = hidden_states
+        self.attentions = attentions
+        self.cross_attentions = cross_attentions
         
 
 class TrainingStepOutput:
