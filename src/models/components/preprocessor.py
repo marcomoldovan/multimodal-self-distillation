@@ -86,15 +86,20 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
             Model configuration.
     """
 
-    def __init__(self, config) -> None:
+    def __init__(
+        self, 
+        d_model: int,
+        vocab_size: int,
+        max_position_embeddings: int
+        ) -> None:
         super().__init__()
-        self.config = config
-        self.embeddings = nn.Embedding(num_embeddings=config.vocab_size, embedding_dim=config.d_model)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.d_model)
+        self.d_model = d_model
+        self.embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
+        self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
 
     @property
     def num_channels(self) -> int:
-        return self.config.d_model
+        return self.d_model
 
     def forward(self, inputs: torch.LongTensor) -> torch.FloatTensor:
         embeddings = self.embeddings(inputs)
@@ -143,8 +148,7 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
 
     def __init__(
         self,
-        config,
-        prep_type="conv",
+        prep_type: str = "conv",
         spatial_downsample: int = 4,
         temporal_downsample: int = 1,
         position_encoding_type: str = "fourier",
@@ -158,7 +162,6 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         **position_encoding_kwargs,
     ):
         super().__init__()
-        self.config = config
 
         if prep_type not in ("conv", "patches", "pixels", "conv1x1"):
             raise ValueError(f"Prep_type {prep_type} is invalid")
@@ -339,13 +342,16 @@ class PerceiverOneHotPreprocessor(AbstractPreprocessor):
             Model configuration.
     """
 
-    def __init__(self, config) -> None:
+    def __init__(
+        self, 
+        num_labels: int
+        ) -> None:
         super().__init__()
-        self.config = config
+        self.num_labels = num_labels
 
     @property
     def num_channels(self) -> int:
-        return self.config.num_labels
+        return self.num_labels
 
     def forward(self, inputs: torch.Tensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True):
         # Add a dummy index dimension.
@@ -380,7 +386,6 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
 
     def __init__(
         self,
-        config,
         prep_type: str = "patches",
         samples_per_patch: int = 96,
         position_encoding_type: str = "fourier",
@@ -390,7 +395,6 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         **position_encoding_kwargs,
     ):
         super().__init__()
-        self.config = config
 
         if prep_type not in ("patches",):
             raise ValueError(f"Prep_type {prep_type} is invalid, can only be 'patches'.")
@@ -431,7 +435,7 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         if self.position_encoding_type == "trainable":
             pos_enc = self.position_embeddings(batch_size)
         elif self.position_encoding_type == "fourier":
-            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device)
+            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device) #TODO remove all device calls
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -494,7 +498,10 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         return common_channel_size
 
     def forward(
-        self, inputs: Mapping[str, torch.Tensor], pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True
+        self, 
+        inputs: Mapping[str, torch.Tensor], 
+        pos: Optional[torch.Tensor] = None, 
+        network_input_is_1d: bool = True
     ) -> PreprocessorOutputType:
         padded = {}
         modality_sizes = {}

@@ -15,6 +15,7 @@ from src.utils import get_logger
 ModalitySizeType = Mapping[str, int]
 PreprocessorOutputType = Tuple[torch.Tensor, Optional[torch.Tensor], torch.Tensor]
 PreprocessorType = Callable[..., PreprocessorOutputType]
+PredictionHeadType = Callable[..., Any]
 PostprocessorType = Callable[..., Any]
 
 logger = get_logger(__name__)
@@ -267,7 +268,7 @@ class PerceiverMLP(nn.Module):
     def __init__(self, input_size, widening_factor, hidden_act='gelu'):
         super().__init__()
         self.dense1 = nn.Linear(input_size, widening_factor * input_size)
-        if isinstance(hidden_act, str): #TODO implement a lookup dict for other activation functions
+        if isinstance(hidden_act, str):
             self.intermediate_act_fn = nn.GELU()
         else:
             self.intermediate_act_fn = hidden_act
@@ -355,6 +356,7 @@ class PerceiverEncoder(nn.Module):
     def __init__(
         self,
         d_latents,
+        num_blocks,
         num_self_attention_heads,
         num_self_attends_per_block,
         num_cross_attention_heads,
@@ -369,6 +371,8 @@ class PerceiverEncoder(nn.Module):
         use_query_residual=True,
         ):
         super().__init__()
+        
+        self.num_blocks = num_blocks
         
         # Check that we can use multihead-attention with these shapes.
         if d_latents % num_self_attention_heads != 0:
@@ -446,7 +450,7 @@ class PerceiverEncoder(nn.Module):
             all_cross_attentions = all_cross_attentions + (layer_outputs[1],)
 
         # Apply the block of self-attention layers more than once:
-        for _ in range(self.config.num_blocks):
+        for _ in range(self.num_blocks):
             for i, layer_module in enumerate(self.self_attends):
                 if output_hidden_states:
                     all_hidden_states = all_hidden_states + (hidden_states,)
@@ -488,6 +492,7 @@ class PerceiverModel(nn.Module):
         d_model,
         num_latents,
         d_latents,
+        num_blocks,
         num_self_attention_heads,
         num_self_attends_per_block,
         num_cross_attention_heads,
@@ -501,6 +506,7 @@ class PerceiverModel(nn.Module):
         kv_dim=None,
         use_query_residual=True,
         input_preprocessor: PreprocessorType = None,
+        prediction_head: PredictionHeadType = None,
     ):
         """
         This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
@@ -520,6 +526,10 @@ class PerceiverModel(nn.Module):
         """
         super().__init__()
         
+        self.d_model = d_model
+        self.num_blocks = num_blocks
+        self.num_self_attends_per_block = num_self_attends_per_block
+        
         # initialized by Hydra
         self.input_preprocessor = input_preprocessor
         
@@ -528,6 +538,7 @@ class PerceiverModel(nn.Module):
         self.encoder = PerceiverEncoder(
             self,
             d_latents=d_latents,
+            num_blocks=num_blocks,
             num_self_attention_heads=num_self_attention_heads,
             num_self_attends_per_block=num_self_attends_per_block,
             num_cross_attention_heads=num_cross_attention_heads,
@@ -541,7 +552,6 @@ class PerceiverModel(nn.Module):
             kv_dim=input_preprocessor.num_channels if input_preprocessor is not None else d_model,
             use_query_residual=use_query_residual,
         )
-        #TODO maybe (!) add post_init() function from PreTrainedModel
 
 
     def forward(
@@ -575,21 +585,20 @@ class PerceiverModel(nn.Module):
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = output_attentions if output_attentions is not None else False
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else False
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = return_dict if return_dict is not None else False
 
         if self.input_preprocessor is not None:
-            inputs, modality_sizes, inputs_without_pos = self.input_preprocessor(inputs)
+            inputs, _, _ = self.input_preprocessor(inputs)
         else:
-            modality_sizes = None
-            inputs_without_pos = None
-            if inputs.size()[-1] != self.config.d_model:
+
+            if inputs.size()[-1] != self.d_model:
                 raise ValueError(
-                    f"Last dimension of the inputs: {inputs.size()[-1]} doesn't correspond to config.d_model: {self.config.d_model}. "
-                    "Make sure to set config.d_model appropriately."
+                    f"Last dimension of the inputs: {inputs.size()[-1]} doesn't correspond to d_model: {self.d_model}. "
+                    "Make sure to set d_model appropriately."
                 )
 
         batch_size, seq_length, _ = inputs.size()
@@ -605,7 +614,7 @@ class PerceiverModel(nn.Module):
         # attention_probs has shape bsz x n_heads x N x N
         # input head_mask has shape [num_heads] or [num_blocks x num_heads]
         # and head_mask is converted to shape [num_blocks x batch x num_heads x N x N]
-        head_mask = self.get_head_mask(head_mask, self.config.num_blocks * self.config.num_self_attends_per_block)
+        head_mask = self.get_head_mask(head_mask, self.num_blocks * self.num_self_attends_per_block)
 
         embedding_output = self.embeddings(batch_size=batch_size)
 
@@ -627,3 +636,6 @@ class PerceiverModel(nn.Module):
             attentions=encoder_outputs.attentions,
             cross_attentions=encoder_outputs.cross_attentions,
         )
+        
+        
+#TODO: if we were to add a decoder we put it in this file because it is technically part of the Perceiver

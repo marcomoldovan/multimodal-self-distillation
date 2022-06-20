@@ -7,14 +7,15 @@ weight_decay: 0.0005
 
 model:
   _target_: src.models.components.encoder.PerceiverModel
-  d_model: 0
-  num_latents: 0
-  d_latents: 0
-  num_self_attention_heads: 0
-  num_self_attends_per_block: 0
-  num_cross_attention_heads: 0
-  qk_channels: 0
-  v_channels: 0
+  d_model: 768
+  num_latents: 256
+  d_latents: 1280
+  num_blocks: 1
+  num_self_attention_heads: 8
+  num_self_attends_per_block: 26
+  num_cross_attention_heads: 8
+  qk_channels: None
+  v_channels: None
   cross_attention_shape_for_attention: kv
   self_attention_widening_factor: 1
   cross_attention_widening_factor: 1
@@ -25,6 +26,36 @@ model:
 
   input_preprocessor:
     _target_: src.models.components.preprocessor.PerceiverPreprocessor
+    modalities:
+      audio:
+        _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
+        prep_type: patches
+        samples_per_batch: 96
+        position_encoding_type: fourier
+        concat_or_add_pos: concat
+        out_channels: 64
+        project_pos_dim: -1
+      image:
+        _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
+        prep_type: conv
+        spatial_downsample: 4
+        temporal_downsample: 1
+        position_encoding_type: fourier
+        in_channels: 3
+        out_channels: 64
+        conv_after_patching: False
+        conv_after_patching_in_channels: 54  # only relevant when conv_after_patching = True
+        conv2d_use_batchnorm: True
+        concat_or_add_pos: concat
+        project_pos_dim: -1
+      text:
+        _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
+        d_model: ${model.d_model}
+        vocab_size: 262
+        max_position_embeddings: 2048
+      label:
+        _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
+        num_labels: 1000
 
 ema:
   _target_: src.models.components.ema.EMA
