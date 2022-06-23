@@ -1,10 +1,8 @@
 import os
 from typing import Optional
-from torch.utils.data import Dataset, DataLoader, random_split
-from datasets import load_dataset, load_from_disk, concatenate_datasets
+from torch.utils.data import Dataset, DataLoader
+from datasets import load_dataset
 from pytorch_lightning import LightningDataModule
-
-from src.datamodules.components.librispeech_dataset import LibriSpeechDataset
 
 
 class LibriSpeechDataModule(LightningDataModule):
@@ -27,7 +25,6 @@ class LibriSpeechDataModule(LightningDataModule):
         train_batch_size,
         val_batch_size,
         test_batch_size,
-        load_preprocessed_data=False,
         split='train.360',
         pin_memory=True):
         super().__init__()
@@ -52,12 +49,7 @@ class LibriSpeechDataModule(LightningDataModule):
         """Download data if needed. This method is called only from a single GPU.
         Do not use it to assign state (self.x = y)."""
         
-        # preprocessed meaning that the input values were already fed through the convolutional feature extractor
-        if self.hparams.load_preprocessed_data: 
-            for dir in range(1): # range(len(next(os.walk(self.hparams.data_dir))[1])):
-                load_from_disk(f'{self.hparams.data_dir}/{dir}')  
-        else:
-            load_dataset('librispeech_asr', 'clean', split=self.hparams.split)
+        load_dataset('librispeech_asr', 'clean', split=self.hparams.split, cache_dir=self.hparams.data_dir)
             
         
     def setup(self, stage=None):
@@ -68,20 +60,8 @@ class LibriSpeechDataModule(LightningDataModule):
         # Assign train/val datasets for use in dataloaders
         
         if stage == "fit" or stage is None:
-            if self.hparams.load_preprocessed_data:
-                train_shards_list = []
-                for dir in range(1): # range(len(next(os.walk(self.hparams.data_dir))[1])):
-                    shard = load_from_disk(f'{self.hparams.data_dir}/train/{dir}')
-                    train_shards_list.append(shard)
-                libri_train = concatenate_datasets(train_shards_list)
-                self.libri_train = LibriSpeechDataset(libri_train)
-                
-                libri_val = load_from_disk(f'{self.hparams.data_dir}/val/')
-                self.libri_val = LibriSpeechDataset(libri_val)
-                    
-            else:
-                self.libri_train = LibriSpeechDataset(load_dataset('librispeech_asr', 'clean', split=self.hparams.split))
-                self.libri_val = LibriSpeechDataset(load_dataset('librispeech_asr', 'clean', split='validation'))
+            self.libri_train = load_dataset('librispeech_asr', 'clean', split=self.hparams.split)
+            self.libri_val = load_dataset('librispeech_asr', 'clean', split='validation')
                 
 
         # Assign test dataset for use in dataloader(s)

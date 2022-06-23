@@ -9,7 +9,7 @@ split: train.360
 pin_memory: True
 
 collator:
-  _target_: src.datamodules.components.librispeech_dataset.LibriCollator
+  _target_: src.datamodules.components.librispeech_collator.LibriCollator
   load_preprocessed_data: False
   pretrained_speech_model: ntu-spml/distilhubert
   speech_max_length: 80000

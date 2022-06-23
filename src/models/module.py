@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 import torch
 import pytorch_lightning as pl
@@ -46,7 +46,9 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         self.student = model
         self.teacher = ema
         #TODO when saving the best checkpoint, the teacher model is not saved
-        #TODO clarify what val metric could be used during training. or are we only looking at the loss?
+        #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
+        #! --> Encapsulate metrics as a class so this module is agnostic to val matrics and 
+        #! it's specified according to the type of data we're training on
         
         # EMA parameters
         self.ema_decay = ema_decay
@@ -80,10 +82,10 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
             self.teacher.step(self.student)
 
 
-    def forward(self, masked_inputs: torch.Tensor):
+    def forward(self, masked_inputs: torch.Tensor, original_inputs: torch.Tensor) -> TrainingStepOutput:
         student_outputs = self.student(masked_inputs)
         with torch.no_grad():
-            teacher_outputs = self.teacher(masked_inputs)
+            teacher_outputs = self.teacher(original_inputs)
         return TrainingStepOutput(student_outputs, teacher_outputs)
 
 
