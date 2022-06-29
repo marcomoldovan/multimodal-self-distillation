@@ -6,35 +6,40 @@ lr: 0.001
 weight_decay: 0.0005
 
 model:
-  _target_: src.models.components.encoder.PerceiverModel
-  d_model: 768
-  num_latents: 256
-  d_latents: 1280
+  _target_: src.models.components.perceiver.PerceiverModel
+  d_model: 704
+  num_latents: 784
+  d_latents: 512
   num_blocks: 1
   num_self_attention_heads: 8
-  num_self_attends_per_block: 26
-  num_cross_attention_heads: 8
-  qk_channels: None
-  v_channels: None
+  num_self_attends_per_block: 8
+  num_cross_attention_heads: 1
+  qk_channels: Null
+  v_channels: Null
   cross_attention_shape_for_attention: kv
   self_attention_widening_factor: 1
   cross_attention_widening_factor: 1
   attention_probs_dropout_prob: 0.1
   chunk_size_feed_forward: 0 # found in PretrainedConfig        
-  kv_dim: None
+  kv_dim: Null
   use_query_residual: True
 
   input_preprocessor:
-    _target_: src.models.components.preprocessor.PerceiverPreprocessor
+    _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
     modalities:
       audio:
         _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
         prep_type: patches
-        samples_per_batch: 96
+        samples_per_patch: 96
         position_encoding_type: fourier
         concat_or_add_pos: concat
         out_channels: 64
         project_pos_dim: -1
+        fourier_position_encoding_kwargs:
+          num_bands: 192
+          max_resolution: (1*1920) # config.num_frames * config.audio_samples_per_frame #! num_frames > 1 for video
+          sine_only: False
+          concat_pos: True
       image:
         _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
         prep_type: conv
@@ -48,19 +53,19 @@ model:
         conv2d_use_batchnorm: True
         concat_or_add_pos: concat
         project_pos_dim: -1
+        fourier_position_encoding_kwargs: 
+          num_bands: 32
+          max_resolution: (1, 56, 56) # config.num_frames, config.image_size, config.image_size #! num_frames > 1 for video
+          sine_only: False
+          concat_pos: True
       text:
         _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-        d_model: ${model.d_model}
+        d_model: 512
         vocab_size: 262
         max_position_embeddings: 2048
       label:
         _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
         num_labels: 1000
-
-ema:
-  _target_: src.models.components.ema.EMA
-  model: ${model}
-  decay: 0.999
 
 criterion:
   _target_: src.models.components.criterion.LatentPredictionLoss

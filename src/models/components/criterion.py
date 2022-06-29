@@ -8,6 +8,7 @@ class LatentPredictionLoss(nn.Module):
         reduction: str = "mean",
         beta: float = 1.0        
         ) -> None:
+        super().__init__()
         
         self.loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
         

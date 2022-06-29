@@ -28,7 +28,6 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
     def __init__(
         self,
         model: torch.nn.Module,
-        ema: EMA,
         criterion: LatentPredictionLoss,
         ema_decay: float = 0.999,
         ema_end_decay: float = 0.9999,
@@ -44,7 +43,7 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         
         # student and teacher models is instantiated by Hydra
         self.student = model
-        self.teacher = ema
+        self.teacher = EMA(model, ema_decay)
         #TODO when saving the best checkpoint, the teacher model is not saved
         #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
         #! --> Encapsulate metrics as a class so this module is agnostic to val matrics and 

@@ -12,13 +12,6 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.loggers import LoggerCollection, WandbLogger
 from pytorch_lightning import Trainer
-from transformers import BertModel
-from transformers.models.hubert.modeling_hubert import HubertPositionalConvEmbedding
-
-
-from src.models.components.perceiver import (
-    PerceiverEncoder
-)
 
 
 def exists(val):

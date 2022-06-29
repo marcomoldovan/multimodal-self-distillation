@@ -42,12 +42,12 @@ class PerceiverSelfAttention(nn.Module):
     def __init__(
         self,
         attention_probs_dropout_prob,
-        is_cross_attention=False,
-        qk_channels=None,
-        v_channels=None,
-        num_heads=1,
-        q_dim=None,
-        kv_dim=None
+        is_cross_attention,
+        qk_channels,
+        v_channels,
+        num_heads,
+        q_dim,
+        kv_dim
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -227,7 +227,7 @@ class PerceiverAttention(nn.Module):
         self.output.dense = prune_linear_layer(self.output.dense, index, dim=1)
 
         # Update hyper params and store pruned heads
-        self.self.num_attention_heads = self.self.num_attention_heads - len(heads) #TODO what's with this double self?
+        self.self.num_attention_heads = self.self.num_attention_heads - len(heads) 
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
@@ -489,13 +489,13 @@ class PerceiverEncoder(nn.Module):
 class PerceiverModel(nn.Module):
     def __init__(
         self,
-        d_model,
-        num_latents,
-        d_latents,
-        num_blocks,
-        num_self_attention_heads,
-        num_self_attends_per_block,
-        num_cross_attention_heads,
+        d_model=704,
+        num_latents=784,
+        d_latents=512,
+        num_blocks=1,
+        num_self_attention_heads=8,
+        num_self_attends_per_block=8,
+        num_cross_attention_heads=1,
         qk_channels=None,
         v_channels=None,
         cross_attention_shape_for_attention="kv",
@@ -506,7 +506,6 @@ class PerceiverModel(nn.Module):
         kv_dim=None,
         use_query_residual=True,
         input_preprocessor: PreprocessorType = None,
-        prediction_head: PredictionHeadType = None,
     ):
         """
         This model is a PyTorch [torch.nn.Module](https://pytorch.org/docs/stable/nn.html#torch.nn.Module) sub-class. Use
@@ -536,7 +535,6 @@ class PerceiverModel(nn.Module):
         self.embeddings = PerceiverEmbeddings(num_latents, d_latents)
         
         self.encoder = PerceiverEncoder(
-            self,
             d_latents=d_latents,
             num_blocks=num_blocks,
             num_self_attention_heads=num_self_attention_heads,
@@ -605,7 +603,7 @@ class PerceiverModel(nn.Module):
 
         # If no attention mask is provided, make them all ones
         if attention_mask is None:
-            attention_mask = torch.ones(((batch_size, seq_length))) #! removed device call here as per PyTorch Lightning guide, might cause issues
+            attention_mask = torch.ones(((batch_size, seq_length)))
         # Make the attention mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
         extended_attention_mask = self.invert_attention_mask(attention_mask)
 
