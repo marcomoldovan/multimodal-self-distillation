@@ -6,6 +6,7 @@ from typing import Any, Callable, Mapping, Optional, Tuple, Union, Dict
 from transformers.modeling_outputs import BaseModelOutputWithCrossAttentions
 from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
+from src.models.components.masking import mask_hidden_states
 from src.models.components.outputs import ForwardPassOutput
 from src.utils import get_logger
 
@@ -489,6 +490,8 @@ class PerceiverEncoder(nn.Module):
 class PerceiverModel(nn.Module):
     def __init__(
         self,
+        is_training=False,
+        is_student=False,
         d_model=704,
         num_latents=784,
         d_latents=512,
@@ -505,6 +508,8 @@ class PerceiverModel(nn.Module):
         chunk_size_feed_forward=0, # found in PretrainedConfig        
         kv_dim=None,
         use_query_residual=True,
+        mask_time_prob=0.05,
+        mask_time_length=10,
         input_preprocessor: PreprocessorType = None,
     ):
         """
@@ -525,9 +530,13 @@ class PerceiverModel(nn.Module):
         """
         super().__init__()
         
+        self.is_training = is_training
+        self.is_student = is_student
         self.d_model = d_model
         self.num_blocks = num_blocks
         self.num_self_attends_per_block = num_self_attends_per_block
+        self.mask_time_prob = mask_time_prob
+        self.mask_time_length = mask_time_length
         
         # initialized by Hydra
         self.input_preprocessor = input_preprocessor
@@ -550,6 +559,10 @@ class PerceiverModel(nn.Module):
             kv_dim=input_preprocessor.num_channels if input_preprocessor is not None else d_model,
             use_query_residual=use_query_residual,
         )
+        
+        
+    def set_student_status(self, is_student: bool):
+        self.is_student = is_student
 
 
     def forward(
@@ -598,6 +611,16 @@ class PerceiverModel(nn.Module):
                     f"Last dimension of the inputs: {inputs.size()[-1]} doesn't correspond to d_model: {self.d_model}. "
                     "Make sure to set d_model appropriately."
                 )
+                
+        if self.is_student:
+            inputs = mask_hidden_states(
+                hidden_states=inputs,
+                attention_mask=attention_mask,
+                mask_time_prob=self.mask_time_prob,
+                mask_time_length=self.mask_time_length,
+                training=self.is_training
+                )
+            
 
         batch_size, seq_length, _ = inputs.size()
 

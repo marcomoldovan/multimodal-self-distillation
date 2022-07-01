@@ -14,12 +14,12 @@ class EMA:
     def __init__(
         self, 
         model: nn.Module, 
-        ema_decay, 
+        ema_decay: float = 0.999, 
         skip_keys=None
     ):
         self.model = model
         self.model.requires_grad_(False)
-        self.decay = 0.999
+        self.decay = ema_decay
         self.skip_keys = skip_keys or set()
         self.num_updates = 0
 

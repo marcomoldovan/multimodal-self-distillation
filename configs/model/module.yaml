@@ -7,6 +7,8 @@ weight_decay: 0.0005
 
 model:
   _target_: src.models.components.perceiver.PerceiverModel
+  is_training: True
+  is_student: False
   d_model: 704
   num_latents: 784
   d_latents: 512
@@ -23,6 +25,8 @@ model:
   chunk_size_feed_forward: 0 # found in PretrainedConfig        
   kv_dim: Null
   use_query_residual: True
+  mask_time_prob: 0.05
+  mask_time_length: 10
 
   input_preprocessor:
     _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor

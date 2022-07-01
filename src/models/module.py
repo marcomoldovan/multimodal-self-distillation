@@ -44,6 +44,11 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         # student and teacher models is instantiated by Hydra
         self.student = model
         self.teacher = EMA(model, ema_decay)
+        
+        # set student status for each model in order for masking to be applied only to the student model
+        self.student.set_student_status(True)
+        self.teacher.set_student_status(False)
+        
         #TODO when saving the best checkpoint, the teacher model is not saved
         #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
         #! --> Encapsulate metrics as a class so this module is agnostic to val matrics and 
