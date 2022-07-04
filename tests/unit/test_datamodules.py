@@ -1,0 +1,8 @@
+import os
+import pytest
+import torch
+
+from src.datamodules.wikipedia_datamodule import WikipediaDatamodule
+from src.datamodules.imagenet_datamodule import ImageNetDatamodule
+from src.datamodules.librispeech_datamodule import LibrispeechDatamodule
+from src.datamodules.conceptual_datamodule import ConceptualDatamodule
