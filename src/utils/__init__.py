@@ -2,9 +2,6 @@ import logging
 import warnings
 from typing import List, Sequence
 
-import torch
-
-import torch
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree

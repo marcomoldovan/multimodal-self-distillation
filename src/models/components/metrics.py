@@ -19,3 +19,11 @@ def reciprocal_ranks(pairwise_similarity_results):
     preds_tensor = torch.Tensor(preds)
     
     return indexes_tensor, targets_tenosr, preds_tensor
+
+
+class PretrainingMetric:
+    def __init__(self):
+        self.train
+        self.val
+        self.test
+        

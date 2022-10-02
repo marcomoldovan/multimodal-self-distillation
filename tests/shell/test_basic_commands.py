@@ -45,6 +45,20 @@ def test_mixed_precision():
         "++trainer.precision=16",
     ]
     run_command(command)
+    
+    
+@RunIf(min_gpus=1)
+@pytest.mark.slow
+def test_grad_accumulation():
+    """Test running 1 epoch with grad accumulation."""
+    command = [
+        "train.py",
+        "++trainer.max_epochs=1",
+        "++trainer.gpus=1",
+        "++trainer.precision=16",
+        "++trainer.grad_accumulation_steps=4",
+    ]
+    run_command(command)
 
 
 @pytest.mark.slow

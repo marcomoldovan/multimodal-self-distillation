@@ -61,8 +61,10 @@ class ConceptualCaptionsDataModule(LightningDataModule):
     def prepare_data(self):
         """Download data if needed. This method is called only from a single GPU.
         Do not use it to assign state (self.x = y)."""
-        
-        load_dataset('conceptual_captions', cache_dir=self.hparams.data_dir)
+        if os.path.isdir(self.hparams.data_dir):
+            print("Data directory already exists, skipping download.")
+        else:
+            load_dataset('conceptual_captions', cache_dir=self.hparams.data_dir)
             
         
     def fetch_single_image(self, image_url, timeout=None, retries=0):

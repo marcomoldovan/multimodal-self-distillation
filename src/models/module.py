@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 
 import torch
 import pytorch_lightning as pl
@@ -9,10 +9,13 @@ from torchmetrics.retrieval.reciprocal_rank import RetrievalMRR
 from src.models.components.ema import EMA
 from src.models.components.outputs import TrainingStepOutput
 from src.models.components.criterion import LatentPredictionLoss
+from src.models.components.metrics import PretrainingMetric
+from src.models.components.perceiver import PerceiverModel
+from src.models.components.hip import HiPModel
 from src.utils import exists
 
 
-class FlatPerceiverData2VecPreTraining(pl.LightningModule):
+class LatentPredictionPretraining(pl.LightningModule):
     """
     Example of LightningModule for MNIST classification.
     A LightningModule organizes your PyTorch code into 5 sections:
@@ -27,8 +30,9 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
 
     def __init__(
         self,
-        model: torch.nn.Module,
+        model: Union[PerceiverModel, HiPModel],
         criterion: LatentPredictionLoss,
+        metric: PretrainingMetric,
         ema_decay: float = 0.999,
         ema_end_decay: float = 0.9999,
         ema_anneal_end_step: int = 300000,
@@ -47,7 +51,7 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         
         # set student status for each model in order for masking to be applied only to the student model
         self.student.set_student_status(True)
-        self.teacher.set_student_status(False)
+        self.teacher.model.set_student_status(False)
         
         #TODO when saving the best checkpoint, the teacher model is not saved
         #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
@@ -65,6 +69,9 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
 
         # loss function
         self.criterion = criterion
+        
+        # metric class that is configured depending on pretraining data
+        self.metric = metric
         
         
     def ema_step(self):
@@ -86,23 +93,27 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
             self.teacher.step(self.student)
 
 
-    def forward(self, masked_inputs: torch.Tensor, original_inputs: torch.Tensor) -> TrainingStepOutput:
-        student_outputs = self.student(masked_inputs)
+    def forward(self, batch: Any) -> TrainingStepOutput:
+        student_outputs = self.student(batch)
         with torch.no_grad():
-            teacher_outputs = self.teacher(original_inputs)
+            self.teacher.model.eval()
+            teacher_outputs = self.teacher.model(batch)
         return TrainingStepOutput(student_outputs, teacher_outputs)
 
 
     def step(self, batch: Any):
-        masked_inputs, original_inputs = batch
-        
         # forward pass
-        outputs = self.forward(masked_inputs, original_inputs)
+        outputs = self.forward(batch)
         
         # compute loss
         loss = self.criterion(outputs.student_outputs.hidden_states, outputs.teacher_outputs.hidden_states)
         
         return outputs, loss
+    
+    
+    def on_train_batch_end(self, outputs: Any, batch: Any, batch_idx: int) -> None:
+        if exists(self.teacher):
+            self.ema_step(self.student)
 
 
     def training_step(self, batch: Any, batch_idx: int):
@@ -115,14 +126,9 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         # remember to always return loss from `training_step()` or else backpropagation will fail!
         return {"loss": loss}
     
-    
-    def on_train_batch_end(self, outputs: Any, batch: Any, batch_idx: int) -> None:
-        if exists(self.teacher):
-            self.ema_step(self.student)
-
 
     def validation_step(self, batch: Any, batch_idx: int):
-        outputs, loss, indexes, targets, preds = self.step(batch)
+        outputs, loss = self.step(batch)
         
         self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
 
@@ -130,7 +136,7 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         
 
     def test_step(self, batch: Any, batch_idx: int):
-        outputs, loss, indexes, targets, preds = self.step(batch)
+        outputs, loss = self.step(batch)
         
         self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
 
@@ -149,7 +155,7 @@ class FlatPerceiverData2VecPreTraining(pl.LightningModule):
         
         
         
-class FlatPerceiverData2VecFineTuning(pl.LightningModule):
+class HierarchicalPerceiverLatentPredictionPretraining(pl.LightningModule):
     def __init__(self, model: torch.nn.Module):
         super().__init__()
         #TODO use pl.callbacks.BaseFineTuningCallback when finetuning on a smaller dataset

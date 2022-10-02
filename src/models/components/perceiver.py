@@ -619,7 +619,7 @@ class PerceiverModel(nn.Module):
                 mask_time_prob=self.mask_time_prob,
                 mask_time_length=self.mask_time_length,
                 training=self.is_training
-                )
+            )
             
 
         batch_size, seq_length, _ = inputs.size()
@@ -657,6 +657,3 @@ class PerceiverModel(nn.Module):
             attentions=encoder_outputs.attentions,
             cross_attentions=encoder_outputs.cross_attentions,
         )
-        
-        
-#TODO: if we were to add a decoder we put it in this file because it is technically part of the Perceiver

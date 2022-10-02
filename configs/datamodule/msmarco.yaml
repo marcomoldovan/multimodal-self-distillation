@@ -1,0 +1,18 @@
+msmarco_passage:
+  _target_: src.datamodules.librispeech_datamodule.MSMARCOPassageDataModule
+  data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+  train_batch_size: 256
+  val_batch_size: 100
+  test_batch_size: 100
+  train_on_long_form_text: False
+  pin_memory: True
+
+
+msmarco_document:
+  _target_: src.datamodules.librispeech_datamodule.MSMARCODocumentDataModule
+  data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+  train_batch_size: 256
+  val_batch_size: 100
+  test_batch_size: 100
+  train_on_long_form_text: False
+  pin_memory: True

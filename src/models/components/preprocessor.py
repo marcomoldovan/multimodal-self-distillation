@@ -101,7 +101,7 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
     def num_channels(self) -> int:
         return self.d_model
 
-    def forward(self, inputs: torch.LongTensor) -> torch.FloatTensor:
+    def forward(self, inputs: torch.LongTensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True) -> torch.FloatTensor:
         embeddings = self.embeddings(inputs)
 
         seq_length = inputs.shape[1]
@@ -142,6 +142,8 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
             How to concatenate the position encoding to the input. Can be "concat" or "add".
         project_pos_dim (`int`, *optional*, defaults to -1):
             Dimension of the position encoding to project to. If -1, no projection is applied.
+        num_frames: the number of frames in the input video, if num_frames > 1, then the input 
+            is assumed to be a video
         **position_encoding_kwargs (`Dict`, *optional*):
             Keyword arguments for the position encoding.
     """
@@ -159,7 +161,8 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
         conv2d_use_batchnorm: bool = True,
         concat_or_add_pos: str = "concat",
         project_pos_dim: int = -1,
-        **position_encoding_kwargs,
+        num_frames: int = 16,
+        image_size: int = 56,
     ):
         super().__init__()
 
@@ -204,13 +207,31 @@ class PerceiverImagePreprocessor(AbstractPreprocessor):
                 stride=(spatial_downsample, spatial_downsample),
             )
 
+        # set num_bands differently depending on whether we are dealing with video or single image
+        if num_frames > 1:
+            num_bands = 32
+        else:
+            num_bands = 64
+           
+        # set max_resolution differently depending on whether we are dealing with video or single image 
+        if num_frames > 1:
+            max_resolution = (num_frames, image_size, image_size)
+        else:
+            max_resolution = (224, 224)
+            
         # Position embeddings
+        position_encoding_kwargs = dict(
+            num_bands=num_bands,
+            max_resolution=max_resolution,
+            sine_only=False,
+            concat_pos=True,
+        )
         self.project_pos_dim = project_pos_dim
         self.position_embeddings, self.positions_projection = build_position_encoding(
             position_encoding_type=position_encoding_type,
             out_channels=out_channels,
             project_pos_dim=project_pos_dim,
-            **position_encoding_kwargs,
+            fourier_position_encoding_kwargs=position_encoding_kwargs,
         )
 
         # Optional convolutional layer after patches.
@@ -392,7 +413,8 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         concat_or_add_pos: str = "concat",
         out_channels=64,
         project_pos_dim=-1,
-        **position_encoding_kwargs,
+        num_frames=1,
+        audio_samples_per_frame=1920,
     ):
         super().__init__()
 
@@ -406,13 +428,21 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         self.position_encoding_type = position_encoding_type
         self.concat_or_add_pos = concat_or_add_pos
         self.project_pos_dim = project_pos_dim
-
+        
+        self.n_audio_samples = num_frames * audio_samples_per_frame
+        
         # Position embeddings
+        position_encoding_kwargs = dict(
+            num_bands=192,
+            max_resolution=(self.n_audio_samples,),
+            sine_only=False,
+            concat_pos=True,
+        )
         self.position_embeddings, self.positions_projection = build_position_encoding(
             position_encoding_type=position_encoding_type,
             out_channels=out_channels,
             project_pos_dim=project_pos_dim,
-            **position_encoding_kwargs,
+            fourier_position_encoding_kwargs=position_encoding_kwargs,
         )
 
     @property
@@ -435,7 +465,7 @@ class PerceiverAudioPreprocessor(AbstractPreprocessor):
         if self.position_encoding_type == "trainable":
             pos_enc = self.position_embeddings(batch_size)
         elif self.position_encoding_type == "fourier":
-            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device) #TODO remove all device calls
+            pos_enc = self.position_embeddings(index_dims, batch_size, device=inputs.device)
 
         # Optionally project them to a target dimension.
         pos_enc = self.positions_projection(pos_enc)
@@ -508,30 +538,31 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
         inputs_without_pos = {}
         for modality, preprocessor in self.modalities.items():
             # preprocess each modality using the respective preprocessor.
-            output, _, inputs_without_pos[modality] = preprocessor(
-                inputs[modality], pos=pos, network_input_is_1d=network_input_is_1d
-            )
+            if modality in inputs:
+                output, _, inputs_without_pos[modality] = preprocessor(
+                    inputs[modality], pos=pos, network_input_is_1d=network_input_is_1d
+                )
 
-            # pad to the same common_channel_size.
-            batch_size, num_samples, num_channels = output.shape
-            pos_enc = self.padding[modality].expand(batch_size, -1, -1)
+                # pad to the same common_channel_size.
+                batch_size, num_samples, num_channels = output.shape
+                pos_enc = self.padding[modality].expand(batch_size, -1, -1)
 
-            padding = torch.broadcast_to(
-                pos_enc,
-                [batch_size, num_samples, self.num_channels - num_channels],
-            )
-            output_padded = torch.cat([output, padding], dim=2)
+                padding = torch.broadcast_to(
+                    pos_enc,
+                    [batch_size, num_samples, self.num_channels - num_channels],
+                )
+                output_padded = torch.cat([output, padding], dim=2)
 
-            # mask if required
-            if modality in self.mask_probs:
-                mask_token = self.mask[modality].expand(batch_size, -1, -1)
-                mask_prob = self.mask_probs[modality]
-                mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
-                mask = torch.unsqueeze(mask, dim=2).to(mask_token.device)
-                output_padded = (1 - mask) * output_padded + mask * mask_token
+                # mask if required
+                if modality in self.mask_probs:
+                    mask_token = self.mask[modality].expand(batch_size, -1, -1)
+                    mask_prob = self.mask_probs[modality]
+                    mask = torch.bernoulli(torch.full([batch_size, num_samples], mask_prob))
+                    mask = torch.unsqueeze(mask, dim=2).to(mask_token.device)
+                    output_padded = (1 - mask) * output_padded + mask * mask_token
 
-            padded[modality] = output_padded
-            modality_sizes[modality] = output_padded.shape[1]
+                padded[modality] = output_padded
+                modality_sizes[modality] = output_padded.shape[1]
 
         # Apply a predictable ordering to the modalities
         padded_ls = [padded[k] for k in sorted(padded.keys())]

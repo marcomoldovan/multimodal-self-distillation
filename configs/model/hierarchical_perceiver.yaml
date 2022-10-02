@@ -1,0 +1,5 @@
+model:
+  _target_: src.models.components.hip.HiP
+  input_dim: 32
+  blocks: 
+    _target_: src.models.components.hip.PerceiverBlock

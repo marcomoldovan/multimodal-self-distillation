@@ -4,11 +4,12 @@
 defaults:
   - _self_
   - datamodule: librispeech.yaml
-  - model: module.yaml
+  - model: flat_perceiver.yaml
   - callbacks:
       - default.yaml
-      # - wandb.yaml
+      - artifacts.yaml
       # - logging.yaml
+  - profiler: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default.yaml
   - log_dir: default.yaml
