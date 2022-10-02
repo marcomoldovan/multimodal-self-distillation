@@ -60,6 +60,9 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in lg_conf:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
+                
+    #TODO initialize optional profiler here, think about how to structure hydra config for this
+    # https://pytorch-lightning.readthedocs.io/en/1.4.0/api/pytorch_lightning.profiler.PyTorchProfiler.html
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
@@ -77,6 +80,10 @@ def train(config: DictConfig) -> Optional[float]:
         callbacks=callbacks,
         logger=logger,
     )
+    
+    #TODO Here should go the optional tune step
+    # https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.tuner.tuning.Tuner.html#pytorch_lightning.tuner.tuning.Tuner
+    # https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html#tune
 
     # Train the model
     if config.get("train"):

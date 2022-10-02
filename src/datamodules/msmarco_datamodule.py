@@ -112,7 +112,7 @@ class MSMARCOPassageDataModule(LightningDataModule):
 
 
 
-
+#TODO use this probably: https://ir-datasets.com/msmarco-document.html#msmarco-document/train
 class MSMARCODocumentDataModule(LightningDataModule):
     """
     A DataModule implements 5 key methods:

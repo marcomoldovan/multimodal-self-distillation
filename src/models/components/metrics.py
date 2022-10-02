@@ -20,7 +20,9 @@ def reciprocal_ranks(pairwise_similarity_results):
     
     return indexes_tensor, targets_tenosr, preds_tensor
 
-
+#TODO is it possible to use the same class for all metrics?
+# https://torchmetrics.readthedocs.io/en/stable/pages/overview.html
+# https://torchmetrics.readthedocs.io/en/stable/wrappers/metric_tracker.html
 class PretrainingMetric:
     def __init__(self):
         self.train
