@@ -397,23 +397,23 @@ class HiPModel(nn.Module):
     def forward(self, x, attention_mask=None):
         x, _, _ = self.preprocessor(x)
         
-        if self.is_student:
-            inputs = mask_hidden_states(
-                hidden_states=inputs,
-                attention_mask=attention_mask,
-                mask_time_prob=self.mask_time_prob,
-                mask_time_length=self.mask_time_length,
-                training=self.is_training
-            )
-        
         batch_size, seq_length, _ = x.size()
         
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length)))
         
+        if self.is_student:
+            x = mask_hidden_states(
+                hidden_states=x,
+                attention_mask=attention_mask,
+                mask_time_prob=self.mask_time_prob,
+                mask_time_length=self.mask_time_length,
+                training=self.is_training
+            )
+            
         x = self.hip(x, attention_mask)
         
         return ForwardPassOutput(
-            last_hidden_state=x
+            last_hidden_state=x #TODO get hidden_states from model
         )
     
