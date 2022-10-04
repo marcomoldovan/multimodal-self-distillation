@@ -271,7 +271,7 @@ class PerceiverBlock(nn.Module):
         input_dim: int,
         num_groups: int,
         num_latents: int,
-        channels: int,
+        hidden_size: int,
         num_self_attn_layers: int = 1,
         num_cross_attn_heads: int = 1,
         num_self_attn_heads: int = 1,
@@ -287,10 +287,10 @@ class PerceiverBlock(nn.Module):
         super().__init__()
         self.num_groups = num_groups
 
-        self.latents = nn.Parameter(torch.randn(num_groups, num_latents, channels))
+        self.latents = nn.Parameter(torch.randn(num_groups, num_latents, hidden_size))
         self.cross_attention = CrossAttention(
             kv_dim=input_dim,
-            q_dim=channels,
+            q_dim=hidden_size,
             num_heads=num_cross_attn_heads,
             dropout=dropout,
             attention_dropout=cross_attn_dropout,
@@ -301,7 +301,7 @@ class PerceiverBlock(nn.Module):
         )
         self.self_attention_layers = nn.ModuleList([
             SelfAttention(
-                hidden_dim=channels,
+                hidden_dim=hidden_size,
                 num_heads=num_self_attn_heads,
                 dropout=dropout,
                 attention_dropout=self_attn_dropout,
@@ -339,7 +339,7 @@ class BlockConfig:
     num_self_attn_layers: int
     num_self_attn_heads: int
     num_latents: int
-    channels: int
+    hidden_size: int
 
     
 class HiP(nn.Module):
@@ -358,17 +358,19 @@ class HiP(nn.Module):
                 num_self_attn_layers=cfg.num_self_attn_layers,
                 num_self_attn_heads=cfg.num_self_attn_heads,
                 num_latents=cfg.num_latents,
-                channels=cfg.channels
+                hidden_size=cfg.hidden_size
             )
             layers.append(layer)
-            input_dim = cfg.channels
+            input_dim = cfg.hidden_size
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x, attention_mask=None):
+        hidden_states = []
         for i, layer in enumerate(self.layers):
             x = layer(x, attention_mask)
+            hidden_states.append(x)
             attention_mask = None
-        return x
+        return x, hidden_states
     
     
 class HiPModel(nn.Module):
@@ -411,9 +413,10 @@ class HiPModel(nn.Module):
                 training=self.is_training
             )
             
-        x = self.hip(x, attention_mask)
+        x, hidden_states = self.hip(x, attention_mask)
         
         return ForwardPassOutput(
-            last_hidden_state=x #TODO get hidden_states from model
+            last_hidden_state=x,
+            hidden_states=hidden_states
         )
     
