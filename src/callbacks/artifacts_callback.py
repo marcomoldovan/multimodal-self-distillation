@@ -2,15 +2,9 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-import matplotlib.pyplot as plt
-import seaborn as sn
-import torch
 import wandb
-from pytorch_lightning import Callback, Trainer
-from pytorch_lightning.loggers import LoggerCollection, WandbLogger
+from pytorch_lightning import Callback
 from pytorch_lightning.utilities import rank_zero_only
-from sklearn import metrics
-from sklearn.metrics import f1_score, precision_score, recall_score
 
 from src.utils import get_wandb_logger
 

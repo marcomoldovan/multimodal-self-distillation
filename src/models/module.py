@@ -31,19 +31,20 @@ class LatentPredictionPretraining(pl.LightningModule):
     def __init__(
         self,
         model: Union[PerceiverModel, HiPModel],
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler,
         criterion: LatentPredictionLoss,
         metric: PretrainingMetric,
         ema_decay: float = 0.999,
         ema_end_decay: float = 0.9999,
         ema_anneal_end_step: int = 300000,
-        lr: float = 0.001,
-        weight_decay: float = 0.0005,
     ):
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False) #! appears to contain a bug
+        #TODO check if contains a bug
+        self.save_hyperparameters(logger=False) 
         
         # student and teacher models is instantiated by Hydra
         self.student = model
@@ -55,17 +56,16 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         #TODO when saving the best checkpoint, the teacher model is not saved
         #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
-        #! --> Encapsulate metrics as a class so this module is agnostic to val matrics and 
-        #! it's specified according to the type of data we're training on
+        #TODO Encapsulate metrics as a class so this module is agnostic to val matrics and 
         
         # EMA parameters
         self.ema_decay = ema_decay
         self.ema_end_decay = ema_end_decay
         self.ema_anneal_end_step = ema_anneal_end_step
         
-        # optimizer parameters
-        self.lr = lr
-        self.weight_decay = weight_decay
+        # optimizer and scheduler
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
         # loss function
         self.criterion = criterion
@@ -94,6 +94,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> TrainingStepOutput:
+        #TODO adapt this for multimodal alignment
         student_outputs = self.student(batch)
         with torch.no_grad():
             self.teacher.model.eval()
@@ -146,16 +147,25 @@ class LatentPredictionPretraining(pl.LightningModule):
     def configure_optimizers(self):
         """Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
-        See examples here:
+        Examples:
             https://pytorch-lightning.readthedocs.io/en/latest/common/lightning_module.html#configure-optimizers
         """
-        return torch.optim.Adam(
-            params=self.parameters(), lr=self.lr, weight_decay=self.weight_decay
-        )
+        optimizer = self.optimizer(params=self.parameters())
+        scheduler = self.scheduler(optimizer=optimizer)
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val/loss",
+                "interval": "epoch",
+                "frequency": 1,
+            },
+        }
         
         
         
-class HierarchicalPerceiverLatentPredictionPretraining(pl.LightningModule):
+class LatentPredictionFinetuning(pl.LightningModule):
     def __init__(self, model: torch.nn.Module):
         super().__init__()
         #TODO use pl.callbacks.BaseFineTuningCallback when finetuning on a smaller dataset

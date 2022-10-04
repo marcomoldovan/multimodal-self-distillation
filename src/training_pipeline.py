@@ -11,6 +11,7 @@ from pytorch_lightning import (
     seed_everything,
 )
 from pytorch_lightning.loggers import LightningLoggerBase
+from pytorch_lightning.profiler import Profiler
 
 from src import utils
 
@@ -61,13 +62,18 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
                 
-    #TODO initialize optional profiler here, think about how to structure hydra config for this
-    # https://pytorch-lightning.readthedocs.io/en/1.4.0/api/pytorch_lightning.profiler.PyTorchProfiler.html
+    # Init lightning profilers
+    profiler: List[Profiler] = []
+    if "logger" in config:
+        for _, lg_conf in config.logger.items():
+            if "_target_" in lg_conf:
+                log.info(f"Instantiating profiler <{lg_conf._target_}>")
+                profiler.append(hydra.utils.instantiate(lg_conf))
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(
-        config.trainer, callbacks=callbacks, logger=logger, _convert_="partial"
+        config.trainer, callbacks=callbacks, logger=logger, profiler=profiler, _convert_="partial"
     )
 
     # Send some parameters from config to all lightning loggers

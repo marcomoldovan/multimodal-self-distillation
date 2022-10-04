@@ -1,12 +1,13 @@
-hierarchical_perceiver:
+model:
   _target_: src.models.components.hip.HiPModel
   preprocessor:
     _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
     modalities:
+      text:
       audio:
       image:
-      text:
-  model:
+      video:
+  hip:
     _target_: src.models.components.hip.HiP
     input_dim: 32
     block_configs: 
@@ -32,4 +33,29 @@ hierarchical_perceiver:
   is_training: False
   mask_time_prob: 0.05
   mask_time_length: 10
+
+
+
+hip_only:
+  _target_: src.models.components.hip.HiP
+  input_dim: 32
+  block_configs: 
+    - _target_: src.models.components.hip.BlockConfig
+      num_groups: 16
+      num_self_attn_layers: 2
+      num_self_attn_heads: 4
+      num_latents: 128
+      channels: 128 #TODO rename to hidden_size
+    - _target_: src.models.components.hip.BlockConfig
+      num_groups: 4
+      num_self_attn_layers: 2
+      num_self_attn_heads: 8
+      num_latents: 256
+      channels: 256
+    - _target_: src.models.components.hip.BlockConfig
+      num_groups: 1
+      num_self_attn_layers: 8
+      num_self_attn_heads: 12
+      num_latents: 256
+      channels: 384
 

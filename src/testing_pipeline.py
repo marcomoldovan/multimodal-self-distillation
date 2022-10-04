@@ -26,15 +26,17 @@ def test(config: DictConfig) -> None:
 
     # Convert relative ckpt path to absolute path if necessary
     if not os.path.isabs(config.ckpt_path):
-        config.ckpt_path = os.path.join(hydra.utils.get_original_cwd(), config.ckpt_path)
-
-    # Init lightning datamodule
-    log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(config.datamodule)
+        config.ckpt_path = os.path.join(
+            hydra.utils.get_original_cwd(), config.ckpt_path
+        )
 
     # Init lightning model
     log.info(f"Instantiating model <{config.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(config.model)
+    
+    # Init lightning datamodule
+    log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(config.datamodule)
 
     # Init lightning loggers
     logger: List[LightningLoggerBase] = []

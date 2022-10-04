@@ -1,6 +1,11 @@
-input_preprocessor_img:
+input_preprocessor:
   _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
   modalities:
+    text:
+      _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
+      d_model: 512 #TODO interpolate this and add attribute to every modality
+      vocab_size: 262
+      max_position_embeddings: 2048
     audio:
       _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
       prep_type: patches
@@ -24,31 +29,9 @@ input_preprocessor_img:
       conv2d_use_batchnorm: True
       concat_or_add_pos: concat
       project_pos_dim: -1
-      num_frames: 1 #! important to set correctly when processing video
+      num_frames: 1 
       image_size: 56
-    text:
-      _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-      d_model: 512
-      vocab_size: 262
-      max_position_embeddings: 2048
-    label:
-      _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
-      num_labels: 1000
-
-input_preprocessor_vid:
-  _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
-  modalities:
-    audio:
-      _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
-      prep_type: patches
-      samples_per_patch: 96 #96 #! changed from live config
-      position_encoding_type: fourier
-      concat_or_add_pos: concat
-      out_channels: 64
-      project_pos_dim: -1
-      num_frames: 1
-      audio_samples_per_frame: 1920
-    image:
+    video:
       _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
       prep_type: patches
       spatial_downsample: 1
@@ -61,13 +44,8 @@ input_preprocessor_vid:
       conv2d_use_batchnorm: True
       concat_or_add_pos: concat
       project_pos_dim: -1
-      num_frames: 16 #! important to set correctly when processing video
+      num_frames: 16
       image_size: 56
-    text:
-      _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-      d_model: 512
-      vocab_size: 262
-      max_position_embeddings: 2048
-    label:
-      _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
-      num_labels: 1000
+    # label:
+    #   _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
+    #   num_labels: 1000
