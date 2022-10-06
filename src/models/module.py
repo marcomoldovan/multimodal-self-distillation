@@ -107,7 +107,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         outputs = self.forward(batch)
         
         # compute loss
-        loss = self.criterion(outputs.student_outputs.hidden_states, outputs.teacher_outputs.hidden_states)
+        loss = self.criterion(outputs.student_output.hidden_states, outputs.teacher_output.hidden_states)
         
         return outputs, loss
     

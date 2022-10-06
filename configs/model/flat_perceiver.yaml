@@ -17,6 +17,15 @@ scheduler:
   factor: 0.1
   patience: 10
 
+criterion:
+  _target_: src.models.components.criterion.LatentPredictionLoss
+  num_hidden_layers_to_predict: 3
+  reduction: 'mean'
+  beta: 1.0
+
+metric:
+  _target_: src.models.components.metrics.PretrainingMetric
+
 model:
   _target_: src.models.components.perceiver.PerceiverModel
   is_training: True
@@ -34,7 +43,7 @@ model:
   self_attention_widening_factor: 1
   cross_attention_widening_factor: 1
   attention_probs_dropout_prob: 0.1
-  chunk_size_feed_forward: 0 # found in PretrainedConfig        
+  chunk_size_feed_forward: 0
   kv_dim: Null
   use_query_residual: True
   mask_time_prob: 0.05
@@ -43,23 +52,25 @@ model:
   input_preprocessor:
     _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
     modalities:
+      text:
+        _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
+        d_model: ${model.d_latents} 
+        vocab_size: 262
+        max_position_embeddings: 2048
       audio:
         _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
         prep_type: patches
-        samples_per_patch: 96
+        samples_per_patch: 96 # seq length must be multiple of this
         position_encoding_type: fourier
         concat_or_add_pos: concat
         out_channels: 64
         project_pos_dim: -1
-        fourier_position_encoding_kwargs:
-          num_bands: 192
-          max_resolution: (1*1920) # config.num_frames * config.audio_samples_per_frame #! num_frames > 1 for video
-          sine_only: False
-          concat_pos: True
+        num_frames: 1
+        audio_samples_per_frame: 1920
       image:
         _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
-        prep_type: conv
-        spatial_downsample: 4
+        prep_type: pixels
+        spatial_downsample: 1
         temporal_downsample: 1
         position_encoding_type: fourier
         in_channels: 3
@@ -69,22 +80,23 @@ model:
         conv2d_use_batchnorm: True
         concat_or_add_pos: concat
         project_pos_dim: -1
-        fourier_position_encoding_kwargs: 
-          num_bands: 32
-          max_resolution: (1, 56, 56) # config.num_frames, config.image_size, config.image_size #! num_frames > 1 for video
-          sine_only: False
-          concat_pos: True
-      text:
-        _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-        d_model: 512
-        vocab_size: 262
-        max_position_embeddings: 2048
-      label:
-        _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
-        num_labels: 1000
-
-criterion:
-  _target_: src.models.components.criterion.LatentPredictionLoss
-  num_hidden_layers_to_predict: 3
-  reduction: 'mean'
-  beta: 1.0
+        num_frames: 1 
+        image_size: 56
+      video:
+        _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
+        prep_type: patches
+        spatial_downsample: 1
+        temporal_downsample: 1
+        position_encoding_type: fourier
+        in_channels: 3
+        out_channels: 64
+        conv_after_patching: False
+        conv_after_patching_in_channels: 54  # only relevant when conv_after_patching = True
+        conv2d_use_batchnorm: True
+        concat_or_add_pos: concat
+        project_pos_dim: -1
+        num_frames: 16
+        image_size: 56
+      # label:
+      #   _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
+      #   num_labels: 1000

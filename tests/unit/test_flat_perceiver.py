@@ -7,11 +7,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import pytest
 import torch
 import hydra
-
+from typing import List
 from src.models.module import LatentPredictionPretraining
 from src.models.components.perceiver import PerceiverModel
 from src.models.components.ema import EMA
-from src.models.components.criterion import LatentPredictionLoss
 from src.models.components.outputs import ForwardPassOutput, TrainingStepOutput
 from src.models.components.masking import mask_hidden_states
 from tests.helpers import get_input_features
@@ -57,6 +56,10 @@ def test_text_throughput():
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, _, _, token_batch, _, _, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(text=tokens)
         inputs_batch = dict(text=token_batch)
         
@@ -65,9 +68,21 @@ def test_text_throughput():
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
-    
-    
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
+            
+            
 def test_audio_throughput():
     """
     Test that the model can process audio.
@@ -77,15 +92,31 @@ def test_audio_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(audio=audio_features)
         inputs_batch = dict(audio=audio_batch)
         
         outputs = model(inputs)
-        ouputs_batch = model(inputs_batch)
+        outputs_batch = model(inputs_batch)
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
     
     
 def test_image_throughput():
@@ -97,16 +128,32 @@ def test_image_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, image_features, _, _, _, image_batch, _, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(image=image_features)
         inputs_batch = dict(image=image_batch)
         
         outputs = model(inputs)
-        ouputs_batch = model(inputs_batch)
+        outputs_batch = model(inputs_batch)
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
-    
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
+  
 
 def test_video_throughput():
     """
@@ -117,6 +164,10 @@ def test_video_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, _, video_features, _, _, _, video_batch = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(image=video_features)
         inputs_batch = dict(image=video_batch)
         
@@ -125,7 +176,19 @@ def test_video_throughput():
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
         
         
 def test_image_text_throughput():
@@ -137,15 +200,31 @@ def test_image_text_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(audio=audio_features)
         inputs_batch = dict(audio=audio_batch)
         
         outputs = model(inputs)
-        ouputs_batch = model(inputs_batch)
+        outputs_batch = model(inputs_batch)
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
         
 
 def test_image_audio_throughput():
@@ -157,15 +236,31 @@ def test_image_audio_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(audio=audio_features)
         inputs_batch = dict(audio=audio_batch)
         
         outputs = model(inputs)
-        ouputs_batch = model(inputs_batch)
+        outputs_batch = model(inputs_batch)
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
 
 
 def test_audio_text_throughput():
@@ -177,15 +272,31 @@ def test_audio_text_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(audio=audio_features)
         inputs_batch = dict(audio=audio_batch)
         
         outputs = model(inputs)
-        ouputs_batch = model(inputs_batch)
+        outputs_batch = model(inputs_batch)
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
     
     
     
@@ -198,6 +309,10 @@ def test_video_audio_throughput():
         model = hydra.utils.instantiate(cfg.model)
         _, _, _, video_features, _, _, _, video_batch = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(image=video_features)
         inputs_batch = dict(image=video_batch)
         
@@ -206,7 +321,19 @@ def test_video_audio_throughput():
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
     
     
 def test_video_text_thoughput():
@@ -218,6 +345,10 @@ def test_video_text_thoughput():
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(text=tokens, image=video_features, audio=audio_features)
         inputs_batch = dict(text=token_batch, image=video_batch, audio=audio_batch)
         
@@ -226,7 +357,19 @@ def test_video_text_thoughput():
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
         
         
 def test_video_audio_text_thoughput():
@@ -238,6 +381,10 @@ def test_video_audio_text_thoughput():
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
         
+        num_latents = cfg.model.num_latents
+        d_latents  = cfg.model.d_latents
+        num_layers = cfg.model.num_self_attends_per_block
+        
         inputs = dict(text=tokens, image=video_features, audio=audio_features)
         inputs_batch = dict(text=token_batch, image=video_batch, audio=audio_batch)
         
@@ -246,43 +393,75 @@ def test_video_audio_text_thoughput():
         
         assert isinstance(outputs, ForwardPassOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
-        assert outputs.last_hidden_state.size() == (1, 1, 1, 1)
+        assert isinstance(outputs.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs.attentions[-1], torch.Tensor)
+        assert isinstance(outputs.cross_attentions[0], torch.Tensor)
+        assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
+        assert len(outputs.hidden_states) == num_layers + 1
+        
+        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
+        assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
+        assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
+        assert isinstance(outputs_batch.cross_attentions[0], torch.Tensor)
+        assert outputs_batch.last_hidden_state.size() == (32, num_latents, d_latents)
+        assert len(outputs_batch.hidden_states) == num_layers + 1
     
     
-# def test_outputs():
-#     """
-#     Test that the model can process outputs.
-#     """
-#     model = PerceiverModel()
-#     outputs = torch.randn(1, 1, 1, 1)
-#     model.forward(outputs)
-#     assert model.outputs == 1
+def test_pl_module_forward():
+    """
+    Test that the model can process outputs.
+    """
+    with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
+        cfg = hydra.compose(config_name='flat_perceiver')
+        pl_module = hydra.utils.instantiate(cfg)
+        
+        tokens, _, _, _, token_batch, _, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
+        inputs = dict(text=tokens)
+        inputs_batch = dict(text=token_batch)
+        
+        forward_outputs = pl_module.forward(inputs)
+        forward_outputs_batch = pl_module.forward(inputs_batch)
+        
+        assert isinstance(forward_outputs, TrainingStepOutput)
+        assert isinstance(forward_outputs.student_output, ForwardPassOutput)
+        assert isinstance(forward_outputs.teacher_output, ForwardPassOutput)
+        
+        
+        assert isinstance(forward_outputs_batch, TrainingStepOutput)
+        assert isinstance(forward_outputs_batch.student_output, ForwardPassOutput)
+        assert isinstance(forward_outputs_batch.teacher_output, ForwardPassOutput)
     
     
-# def test_latent_masking():
-#     """
-#     Test that the model can process latent masks.
-#     """
-#     model = PerceiverModel()
-#     mask = torch.randn(1, 1, 1, 1)
-#     model.forward(mask)
-#     assert model.latent_masking == 1
-    
-    
-# def test_loss_function():
-#     """
-#     Test that the model can process loss functions.
-#     """
-#     model = PerceiverModel()
-#     loss_function = torch.nn.MSELoss()
-#     model.forward(loss_function)
-#     assert model.loss_function == 1
+def test_pl_module_step():
+    """
+    Test that the model can process loss functions.
+    """
+    with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
+        cfg = hydra.compose(config_name='flat_perceiver')
+        pl_module = hydra.utils.instantiate(cfg)
+        
+        tokens, _, _, _, token_batch, _, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
+        inputs = dict(text=tokens)
+        inputs_batch = dict(text=token_batch)
+        
+        step_outputs, loss = pl_module.step(inputs)
+        step_outputs_batch, loss_batch = pl_module.step(inputs_batch)
+        
+        assert isinstance(step_outputs, TrainingStepOutput)
+        assert isinstance(step_outputs_batch, TrainingStepOutput)
     
 
-# def test_lightning_module_pipeline():
-#     """
-#     Test that the model can process a pipeline.
-#     """
-#     model = PerceiverModel()
-#     pipeline = model.pipeline
-#     assert isinstance(pipeline, torch.nn.Sequential)
+def test_latent_masking():
+    """
+    Test that the model can process latent masks.
+    """
+    model = PerceiverModel()
+    mask = torch.randn(1, 1, 1, 1)
+    model.forward(mask)
+    assert model.latent_masking == 1
+    
+    
+test_pl_module_step()

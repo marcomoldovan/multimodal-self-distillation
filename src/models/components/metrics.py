@@ -25,7 +25,8 @@ def reciprocal_ranks(pairwise_similarity_results):
 # https://torchmetrics.readthedocs.io/en/stable/wrappers/metric_tracker.html
 class PretrainingMetric:
     def __init__(self):
-        self.train
-        self.val
-        self.test
+        pass
+        # self.train
+        # self.val
+        # self.test
         

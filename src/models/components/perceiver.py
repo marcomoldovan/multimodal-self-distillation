@@ -8,7 +8,7 @@ from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable
 
 from src.models.components.masking import mask_hidden_states
 from src.models.components.outputs import ForwardPassOutput
-from src.utils import get_logger
+from src.utils import get_logger, get_parameter_dtype
 
 
 
@@ -559,10 +559,86 @@ class PerceiverModel(nn.Module):
             kv_dim=input_preprocessor.num_channels if input_preprocessor is not None else d_model,
             use_query_residual=use_query_residual,
         )
+    
+    @property
+    def dtype(self) -> torch.dtype:
+        """
+        `torch.dtype`: The dtype of the module (assuming that all the module parameters have the same dtype).
+        """
+        return get_parameter_dtype(self)
         
         
     def set_student_status(self, is_student: bool):
         self.is_student = is_student
+        
+        
+    def invert_attention_mask(self, encoder_attention_mask: torch.Tensor) -> torch.Tensor:
+        """
+        Invert an attention mask (e.g., switches 0. and 1.).
+        Args:
+            encoder_attention_mask (`torch.Tensor`): An attention mask.
+        Returns:
+            `torch.Tensor`: The inverted attention mask.
+        """
+        if encoder_attention_mask.dim() == 3:
+            encoder_extended_attention_mask = encoder_attention_mask[:, None, :, :]
+        if encoder_attention_mask.dim() == 2:
+            encoder_extended_attention_mask = encoder_attention_mask[:, None, None, :]
+        # T5 has a mask that can compare sequence ids, we can simulate this here with this transposition
+        # Cf. https://github.com/tensorflow/mesh/blob/8d2465e9bc93129b913b5ccc6a59aa97abd96ec6/mesh_tensorflow
+        # /transformer/transformer_layers.py#L270
+        # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
+        # encoder_extended_attention_mask.transpose(-1, -2))
+        encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype=self.dtype)  # fp16 compatibility
+
+        if self.dtype == torch.float16:
+            encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e4
+        elif self.dtype in [torch.bfloat16, torch.float32]:
+            encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * -1e9
+        else:
+            raise ValueError(
+                f"{self.dtype} not recognized. `dtype` should be set to either `torch.float32` or `torch.float16`"
+            )
+
+        return encoder_extended_attention_mask
+    
+    
+    def get_head_mask(
+        self, head_mask: Optional[torch.Tensor], num_hidden_layers: int, is_attention_chunked: bool = False
+    ) -> torch.Tensor:
+        """
+        Prepare the head mask if needed.
+        Args:
+            head_mask (`torch.Tensor` with shape `[num_heads]` or `[num_hidden_layers x num_heads]`, *optional*):
+                The mask indicating if we should keep the heads or not (1.0 for keep, 0.0 for discard).
+            num_hidden_layers (`int`):
+                The number of hidden layers in the model.
+            is_attention_chunked: (`bool`, *optional*, defaults to `False`):
+                Whether or not the attentions scores are computed by chunks or not.
+        Returns:
+            `torch.Tensor` with shape `[num_hidden_layers x batch x num_heads x seq_length x seq_length]` or list with
+            `[None]` for each layer.
+        """
+        if head_mask is not None:
+            head_mask = self._convert_head_mask_to_5d(head_mask, num_hidden_layers)
+            if is_attention_chunked is True:
+                head_mask = head_mask.unsqueeze(-1)
+        else:
+            head_mask = [None] * num_hidden_layers
+
+        return head_mask
+
+
+    def _convert_head_mask_to_5d(self, head_mask, num_hidden_layers):
+        """-> [num_hidden_layers x batch x num_heads x seq_length x seq_length]"""
+        if head_mask.dim() == 1:
+            head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)  # We can specify head_mask for each layer
+        assert head_mask.dim() == 5, f"head_mask.dim != 5, instead {head_mask.dim()}"
+        head_mask = head_mask.to(dtype=self.dtype)  # switch to float if need + fp16 compatibility
+        return head_mask
 
 
     def forward(
@@ -570,9 +646,9 @@ class PerceiverModel(nn.Module):
         inputs: torch.FloatTensor,
         attention_mask: Optional[torch.FloatTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+        output_attentions: Optional[bool] = True,
+        output_hidden_states: Optional[bool] = True,
+        return_dict: Optional[bool] = True,
     ) -> ForwardPassOutput:
         r"""
         Args:
@@ -596,11 +672,6 @@ class PerceiverModel(nn.Module):
             return_dict (`bool`, *optional*):
                 Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         """
-        output_attentions = output_attentions if output_attentions is not None else False
-        output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else False
-        )
-        return_dict = return_dict if return_dict is not None else False
 
         if self.input_preprocessor is not None:
             inputs, _, _ = self.input_preprocessor(inputs)

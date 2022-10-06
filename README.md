@@ -109,7 +109,6 @@ choco install python --version=3.9 # Windows, Python 3.7-3.9
 python3 -m venv myenv
 source myenv/bin/activate
 
-
 # if you have several version of python you can create a virtual environment with a specific version:
 virtualenv --python=/usr/bin/<python3.x> myenv
 myenv\Scripts\activate.bat

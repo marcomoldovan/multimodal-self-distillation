@@ -1,7 +1,8 @@
 import logging
 import warnings
-from typing import List, Sequence
+from typing import List, Sequence, Tuple
 
+import torch
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
@@ -22,6 +23,21 @@ count_parameters = lambda model : {'requires_grad':sum(p.numel() for p in model.
 def freeze_module(module):
     for param in module.parameters():
         param.requires_grad = False
+        
+
+def get_parameter_dtype(parameter):
+    try:
+        return next(parameter.parameters()).dtype
+    except StopIteration:
+        # For nn.DataParallel compatibility in PyTorch 1.5
+
+        def find_tensor_attributes(module: torch.nn.Module) -> List[Tuple[str, torch.Tensor]]:
+            tuples = [(k, v) for k, v in module.__dict__.items() if torch.is_tensor(v)]
+            return tuples
+
+        gen = parameter._named_members(get_members_fn=find_tensor_attributes)
+        first_tuple = next(gen)
+        return first_tuple[1].dtype
 
 
 def get_logger(name=__name__) -> logging.Logger:

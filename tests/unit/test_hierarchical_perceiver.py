@@ -10,7 +10,6 @@ import hydra
 
 from src.models.components.hip import HiP
 from src.models.components.ema import EMA
-from src.models.components.criterion import LatentPredictionLoss
 from src.models.components.outputs import ForwardPassOutput, TrainingStepOutput
 from src.models.components.masking import mask_hidden_states
 
