@@ -2,7 +2,9 @@ defaults:
   - default.yaml
 
 gpus: 1
-strategy: ddp
+strategy: ddp #TODO https://github.com/ashleve/lightning-hydra-template/issues/393
 accumulate_grad_batches: 4
 precision: 16
 sync_batchnorm: True
+
+#TODO https://pytorch-lightning.readthedocs.io/en/latest/accelerators/gpu_intermediate.html

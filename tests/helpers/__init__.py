@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import io
 import requests
+import hydra
 import torch
 import numpy as np
 import soundfile as sf
@@ -16,6 +17,12 @@ from transformers import PerceiverTokenizer, PerceiverFeatureExtractor, Wav2Vec2
 from src.utils import get_logger
 
 log = get_logger(__name__)
+
+
+def get_model_hidden_size() -> int:
+    with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_instantiation"):
+        cfg = hydra.compose(config_name='preprocessor')
+        return cfg.get('input_preprocessor').get('modalities').get('text').get('d_model')
 
 
 def get_input_features():
@@ -33,7 +40,7 @@ def get_input_features():
         
         url_audio = "https://www2.cs.uic.edu/~i101/SoundFiles/gettysburg.wav"
         audio = np.array(sf.read(io.BytesIO(requests.get(url_audio).content)))[0] #TODO deprecated, fix this
-        audio_features = audio_feature_extractor(audio, pad_to_multiple_of=96, return_tensors='pt', sampling_rate=16000)['input_values'].unsqueeze(2) 
+        audio_features = audio_feature_extractor(audio, pad_to_multiple_of=96, padding='longest', return_tensors='pt', sampling_rate=16000)['input_values'].unsqueeze(2) 
         
         url_video = "https://dl.fbaipublicfiles.com/pytorchvideo/projects/archery.mp4"
         video = rearrange(VideoReader(requests.get(url_video, stream=True).raw, ctx=cpu(0)).get_batch(range(0, 16)).asnumpy(), 'f h w c -> f c h w')
