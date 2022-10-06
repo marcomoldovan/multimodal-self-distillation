@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import io
 import requests
-import hydra
 import torch
 import numpy as np
 import soundfile as sf
@@ -13,14 +12,17 @@ from PIL import Image
 from decord import VideoReader, cpu
 from einops import rearrange, reduce
 from transformers import PerceiverTokenizer, PerceiverFeatureExtractor, Wav2Vec2FeatureExtractor
+from transformers.utils import logging
 
 from src.utils import get_logger
 
 log = get_logger(__name__)
 
 
-
-def get_input_features(samples_per_patch):    
+def get_input_features(samples_per_patch):
+    
+    logging.set_verbosity(logging.CRITICAL)
+            
     tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
     feature_extractor = PerceiverFeatureExtractor.from_pretrained('deepmind/vision-perceiver-conv')
     audio_feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
@@ -54,5 +56,7 @@ def get_input_features(samples_per_patch):
     image_batch = image_features.expand(32, -1, -1, -1)
     audio_batch = audio_features.expand(32, -1, -1)
     video_batch = video_features.expand(32, -1, -1, -1, -1)
+    
+    logging.set_verbosity(logging.WARNING)
         
     return tokens, image_features, audio_features, video_features, token_batch, image_batch, audio_batch, video_batch

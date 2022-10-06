@@ -1,3 +1,4 @@
+import copy
 import torch.nn as nn
 
 
@@ -17,7 +18,7 @@ class EMA:
         ema_decay: float = 0.999, 
         skip_keys=None
     ):
-        self.model = model
+        self.model = copy.deepcopy(model)
         self.model.requires_grad_(False)
         self.decay = ema_decay
         self.skip_keys = skip_keys or set()

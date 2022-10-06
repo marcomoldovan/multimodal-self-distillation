@@ -43,8 +43,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
-        #TODO check if contains a bug
-        self.save_hyperparameters(logger=False) 
+        self.save_hyperparameters(logger=False, ignore=['model', 'criterion']) 
         
         # student and teacher models is instantiated by Hydra
         self.student = model
