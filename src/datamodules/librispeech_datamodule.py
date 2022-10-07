@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 from pytorch_lightning import LightningDataModule
 from transformers import Wav2Vec2FeatureExtractor, PerceiverTokenizer
+from transformers.utils import logging
 
 
 class LibriSpeechDataModule(LightningDataModule):
@@ -27,20 +28,26 @@ class LibriSpeechDataModule(LightningDataModule):
         val_batch_size,
         test_batch_size,
         split='train.360',
-        pin_memory=True):
+        pin_memory=True
+    ) -> None:
         super().__init__()
         
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
-                
-        self.num_workers = os.cpu_count() #TODO adapt to Windows
+        
+        if os.name == 'nt':
+            self.num_workers = 0
+        else:
+            self.num_workers = os.cpu_count()
             
         self.libri_train: Optional[Dataset] = None
         self.libri_val: Optional[Dataset] = None
         self.libri_test: Optional[Dataset] = None
         
+        logging.set_verbosity(logging.CRITICAL)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
         self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
+        logging.set_verbosity(logging.WARNING)
         
         
     def prepare_data(self):
@@ -60,13 +67,13 @@ class LibriSpeechDataModule(LightningDataModule):
         # Assign train/val datasets for use in dataloaders
         
         if stage == "fit" or stage is None:
-            self.libri_train = load_dataset('librispeech_asr', 'clean', split=self.hparams.split)
-            self.libri_val = load_dataset('librispeech_asr', 'clean', split='validation')
+            self.libri_train = load_dataset('librispeech_asr', 'clean', split=self.hparams.split, cache_dir=self.hparams.data_dir)
+            self.libri_val = load_dataset('librispeech_asr', 'clean', split='validation', cache_dir=self.hparams.data_dir)
                 
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
-            self.libri_test = load_dataset('librispeech_asr', 'clean', split='test')
+            self.libri_test = load_dataset('librispeech_asr', 'clean', split='test', cache_dir=self.hparams.data_dir)
         
         if stage == "predict" or stage is None:
             raise Exception("""This DataModule is not designed to be used for prediction.
@@ -81,7 +88,7 @@ class LibriSpeechDataModule(LightningDataModule):
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
-            )
+        )
         
         
     def val_dataloader(self):
@@ -92,7 +99,7 @@ class LibriSpeechDataModule(LightningDataModule):
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
-            )
+        )
         
         
     def test_dataloader(self):
@@ -103,15 +110,15 @@ class LibriSpeechDataModule(LightningDataModule):
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
-            )
+        )
         
         
     def collate_fn(
         self,
         batch: List[Dict[str, Union[List[int], torch.Tensor]]]
     ) -> Dict[str, torch.Tensor]:
-        
-        input_values = [{"input_values": feature["audio"]["array"]} for feature in batch]
+                
+        input_values = [feature["audio"]["array"] for feature in batch]
         text = [feature["text"] for feature in batch]
         
         audio = self.feature_extractor(

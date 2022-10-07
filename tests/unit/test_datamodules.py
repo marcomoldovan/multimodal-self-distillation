@@ -6,12 +6,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import torch
 import hydra
 
-from src.datamodules.wikipedia_datamodule import WikipediaDataModule
 from src.datamodules.msmarco_datamodule import MSMARCOPassageDataModule
 from src.datamodules.imagenet_datamodule import ImagenetDataModule
-from src.datamodules.tinyimagenet_datamodule import TinyImagenetDataModule
-from src.datamodules.librispeech_datamodule import LibriSpeechDataModule
+from src.datamodules.wikipedia_datamodule import WikipediaDataModule
 from src.datamodules.conceptual_datamodule import ConceptualCaptionsDataModule
+from src.datamodules.librispeech_datamodule import LibriSpeechDataModule
+from src.datamodules.tinyimagenet_datamodule import TinyImagenetDataModule
 
 
 def test_wikipedia():
@@ -61,7 +61,12 @@ def test_librispeech():
         cfg = hydra.compose(config_name='librispeech')
         datamodule = hydra.utils.instantiate(cfg)
         assert isinstance(datamodule, LibriSpeechDataModule)
-    
+        datamodule.prepare_data()
+        datamodule.setup(stage='fit')
+        train_batch = next(iter(datamodule.train_dataloader()))
+        assert train_batch['audio'].size()[0] == cfg.train_batch_size
+        assert train_batch['text'].size()[0] == cfg.train_batch_size
+            
     
 def test_conceptual_captions():
     """
