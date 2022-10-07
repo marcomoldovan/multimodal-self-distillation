@@ -1,8 +1,10 @@
 import os
-from typing import Optional
+import torch
+from typing import Optional, Union, Dict, List
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 from pytorch_lightning import LightningDataModule
+from transformers import Wav2Vec2FeatureExtractor, PerceiverTokenizer
 
 
 class LibriSpeechDataModule(LightningDataModule):
@@ -20,7 +22,6 @@ class LibriSpeechDataModule(LightningDataModule):
     """
     def __init__(
         self,
-        collator,
         data_dir,
         train_batch_size,
         val_batch_size,
@@ -31,18 +32,15 @@ class LibriSpeechDataModule(LightningDataModule):
         
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
-        
-        self.collator = collator
-        
-        self.num_workers = os.cpu_count()
-        if self.hparams.load_preprocessed_data:
-            self.num_proc = 1
-        else:
-            self.num_proc = os.cpu_count()
+                
+        self.num_workers = os.cpu_count() #TODO adapt to Windows
             
         self.libri_train: Optional[Dataset] = None
         self.libri_val: Optional[Dataset] = None
         self.libri_test: Optional[Dataset] = None
+        
+        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
+        self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
         
         
     def prepare_data(self):
@@ -68,7 +66,7 @@ class LibriSpeechDataModule(LightningDataModule):
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
-            self.libri_test = load_dataset('librispeech_asr', 'clean', split='Test')
+            self.libri_test = load_dataset('librispeech_asr', 'clean', split='test')
         
         if stage == "predict" or stage is None:
             raise Exception("""This DataModule is not designed to be used for prediction.
@@ -77,10 +75,10 @@ class LibriSpeechDataModule(LightningDataModule):
     
     def train_dataloader(self):
         return DataLoader(
-            self.libri_train, 
+            dataset=self.libri_train, 
             batch_size=self.hparams.train_batch_size, 
             shuffle=True, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -88,10 +86,10 @@ class LibriSpeechDataModule(LightningDataModule):
         
     def val_dataloader(self):
         return DataLoader(
-            self.libri_val, 
+            dataset=self.libri_val, 
             batch_size=self.hparams.val_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -99,11 +97,35 @@ class LibriSpeechDataModule(LightningDataModule):
         
     def test_dataloader(self):
         return DataLoader(
-            self.libri_test, 
+            dataset=self.libri_test, 
             batch_size=self.hparams.test_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
         
+        
+    def collate_fn(
+        self,
+        batch: List[Dict[str, Union[List[int], torch.Tensor]]]
+    ) -> Dict[str, torch.Tensor]:
+        
+        input_values = [{"input_values": feature["audio"]["array"]} for feature in batch]
+        text = [feature["text"] for feature in batch]
+        
+        audio = self.feature_extractor(
+            input_values,
+            pad_to_multiple_of=96, #TODO read from config
+            padding="longest",
+            return_tensors="pt",
+            sampling_rate=16000, #TODO read from config
+        )
+        
+        tokens = self.tokenizer(
+            text,
+            padding="longest",
+            return_tensors="pt",
+        )
+        
+        return dict(text=tokens["input_ids"], audio=audio["input_values"])

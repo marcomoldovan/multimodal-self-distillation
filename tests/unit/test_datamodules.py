@@ -1,77 +1,74 @@
+import sys
 import os
-import pytest
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 import torch
+import hydra
 
 from src.datamodules.wikipedia_datamodule import WikipediaDataModule
+from src.datamodules.msmarco_datamodule import MSMARCOPassageDataModule
 from src.datamodules.imagenet_datamodule import ImagenetDataModule
+from src.datamodules.tinyimagenet_datamodule import TinyImagenetDataModule
 from src.datamodules.librispeech_datamodule import LibriSpeechDataModule
 from src.datamodules.conceptual_datamodule import ConceptualCaptionsDataModule
 
 
-def test_wikipedia_datamodule_instantiation():
+def test_wikipedia():
     """
     Test that the model can instantiate a WikipediaDatamodule object.
     """
-    model = WikipediaDataModule()
-    assert isinstance(model, WikipediaDataModule)
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_wikipedia"):
+        cfg = hydra.compose(config_name='wikipedia')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, WikipediaDataModule)
     
     
-def test_imagenet_datamodule_instantiation():
+def test_msmarco():
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_msmarco"):
+        cfg = hydra.compose(config_name='msmarco')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, MSMARCOPassageDataModule)
+    
+    
+def test_imagenet():
     """
     Test that the model can instantiate an ImageNetDatamodule object.
     """
-    model = ImagenetDataModule()
-    assert isinstance(model, ImagenetDataModule)
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_imagenet"):
+        cfg = hydra.compose(config_name='imagenet')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, ImagenetDataModule)
+        
+def test_tinyimagenet():
+    """
+    Test that the model can instantiate an ImageNetDatamodule object.
+    """
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_tiny_imagenet"):
+        cfg = hydra.compose(config_name='tinyimagenet')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, TinyImagenetDataModule)
+        train_batch = next(iter(datamodule.train_dataloader()))
+        assert train_batch['image'].size() == torch.Size([cfg.batch_size, 3, 64, 64])
+        assert train_batch['label'].size() == torch.Size([cfg.batch_size])
+            
     
-    
-def test_librispeech_datamodule_instantiation():
+def test_librispeech():
     """
     Test that the model can instantiate a LibrispeechDatamodule object.
     """
-    model = LibriSpeechDataModule()
-    assert isinstance(model, LibriSpeechDataModule)
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_librispeech"):
+        cfg = hydra.compose(config_name='librispeech')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, LibriSpeechDataModule)
     
     
-def test_conceptual_datamodule_instantiation():
+def test_conceptual_captions():
     """
     Test that the model can instantiate a ConceptualCaptionsDatamodule object.
     """
-    model = ConceptualCaptionsDataModule()
-    assert isinstance(model, ConceptualCaptionsDataModule)
-    
-    
-def test_wikipedia_batch_loading():
-    """
-    Test that the model can load a batch of Wikipedia data.
-    """
-    model = WikipediaDataModule()
-    batch = model.get_batch(batch_size=1)
-    assert batch.size() == (1, 1, 300)
-    
-    
-def test_imagenet_batch_loading():
-    """
-    Test that the model can load a batch of ImageNet data.
-    """
-    model = ImagenetDataModule()
-    batch = model.get_batch(batch_size=1)
-    assert batch.size() == (1, 3, 224, 224)
-    
-    
-def test_librispeech_batch_loading():
-    """
-    Test that the model can load a batch of LibriSpeech data.
-    """
-    model = LibriSpeechDataModule()
-    batch = model.get_batch(batch_size=1)
-    assert batch.size() == (1, 1, 16000)
-    
-    
-def test_conceptual_batch_loading():
-    """
-    Test that the model can load a batch of ConceptualCaptions data.
-    """
-    model = ConceptualCaptionsDataModule()
-    batch = model.get_batch(batch_size=1)
-    assert batch.size() == (1, 1, 300)
+    with hydra.initialize(version_base='1.1', config_path='../../configs/datamodule', job_name="test_conceptual_captions"):
+        cfg = hydra.compose(config_name='conceptual')
+        datamodule = hydra.utils.instantiate(cfg)
+        assert isinstance(datamodule, ConceptualCaptionsDataModule)
     

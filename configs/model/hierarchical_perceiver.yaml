@@ -1,5 +1,107 @@
+_target_: src.models.module.LatentPredictionPretraining
+ema_decay: 0.999
+ema_end_decay: 0.9999
+ema_anneal_end_step: 300000
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0005
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  monitor: train/loss
+  mode: min
+  factor: 0.1
+  patience: 10
+
+criterion:
+  _target_: src.models.components.criterion.LatentPredictionLoss
+  num_hidden_layers_to_predict: 3
+  reduction: 'mean'
+  beta: 1.0
+
+metric:
+  _target_: src.models.components.metrics.PretrainingMetric
+
 model:
-  _target_: src.models.components.hip.HiP
-  input_dim: 32
-  blocks: 
-    _target_: src.models.components.hip.PerceiverBlock
+  _target_: src.models.components.hip.HiPModel
+  preprocessor:
+    _target_: src.models.components.preprocessor.PerceiverMultimodalPreprocessor
+    modalities:
+      text:
+        _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
+        d_model: ${model.d_latents} #TODO find solution for this
+        vocab_size: 262
+        max_position_embeddings: 2048
+      audio:
+        _target_: src.models.components.preprocessor.PerceiverAudioPreprocessor
+        prep_type: patches
+        samples_per_patch: 96 # seq length must be multiple of this
+        position_encoding_type: fourier
+        concat_or_add_pos: concat
+        out_channels: 64
+        project_pos_dim: -1
+        num_frames: 1
+        audio_samples_per_frame: 1920
+      image:
+        _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
+        prep_type: pixels
+        spatial_downsample: 1
+        temporal_downsample: 1
+        position_encoding_type: fourier
+        in_channels: 3
+        out_channels: 64
+        conv_after_patching: False
+        conv_after_patching_in_channels: 54  # only relevant when conv_after_patching = True
+        conv2d_use_batchnorm: True
+        concat_or_add_pos: concat
+        project_pos_dim: -1
+        num_frames: 1 
+        image_size: 56
+      video:
+        _target_: src.models.components.preprocessor.PerceiverImagePreprocessor
+        prep_type: patches
+        spatial_downsample: 1
+        temporal_downsample: 1
+        position_encoding_type: fourier
+        in_channels: 3
+        out_channels: 64
+        conv_after_patching: False
+        conv_after_patching_in_channels: 54  # only relevant when conv_after_patching = True
+        conv2d_use_batchnorm: True
+        concat_or_add_pos: concat
+        project_pos_dim: -1
+        num_frames: 16
+        image_size: 56
+      # label:
+      #   _target_: src.models.components.preprocessor.PerceiverOneHotPreprocessor
+      #   num_labels: 1000
+  hip:
+    _target_: src.models.components.hip.HiP
+    input_dim: 32
+    block_configs: 
+      - _target_: src.models.components.hip.BlockConfig
+        num_groups: 16
+        num_self_attn_layers: 2
+        num_self_attn_heads: 4
+        num_latents: 128
+        channels: 128
+      - _target_: src.models.components.hip.BlockConfig
+        num_groups: 4
+        num_self_attn_layers: 2
+        num_self_attn_heads: 8
+        num_latents: 256
+        channels: 256
+      - _target_: src.models.components.hip.BlockConfig
+        num_groups: 1
+        num_self_attn_layers: 8
+        num_self_attn_heads: 12
+        num_latents: 256
+        channels: 384
+  is_student: False
+  is_training: False
+  mask_time_prob: 0.05
+  mask_time_length: 10

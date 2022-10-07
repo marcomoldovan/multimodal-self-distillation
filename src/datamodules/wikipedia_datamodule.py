@@ -3,6 +3,7 @@ from typing import Optional
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 from pytorch_lightning import LightningDataModule
+from transformers import PerceiverTokenizer
 
 
 class WikipediaDataModule(LightningDataModule):
@@ -20,7 +21,6 @@ class WikipediaDataModule(LightningDataModule):
     """
     def __init__(
         self,
-        collator,
         data_dir,
         train_batch_size,
         val_batch_size,
@@ -31,9 +31,7 @@ class WikipediaDataModule(LightningDataModule):
         
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
-        
-        self.collator = collator
-        
+                
         self.num_workers = os.cpu_count()
         if self.hparams.load_preprocessed_data:
             self.num_proc = 1
@@ -43,6 +41,8 @@ class WikipediaDataModule(LightningDataModule):
         self.wiki_train: Optional[Dataset] = None
         self.wiki_val: Optional[Dataset] = None
         self.wiki_test: Optional[Dataset] = None
+        
+        self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
         
         
     def prepare_data(self):
@@ -82,7 +82,7 @@ class WikipediaDataModule(LightningDataModule):
             self.wiki_train, 
             batch_size=self.hparams.train_batch_size, 
             shuffle=True, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -93,7 +93,7 @@ class WikipediaDataModule(LightningDataModule):
             self.wiki_val, 
             batch_size=self.hparams.val_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -104,7 +104,17 @@ class WikipediaDataModule(LightningDataModule):
             self.wiki_val, 
             batch_size=self.hparams.test_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
+        
+        
+    def collate_fn(self, batch):
+        tokens = self.tokenizer(
+            batch,
+            padding="longest",
+            return_tensors="pt",
+        )
+        
+        return dict(text=tokens['input_ids'])

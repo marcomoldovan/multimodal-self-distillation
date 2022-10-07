@@ -1,0 +1,8 @@
+_target_: src.datamodules.tinyimagenet_datamodule.TinyImagenetDataModule
+
+data_dir: E:/Datasets/tiny_imagenet_200 #${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+num_workers: 0
+batch_size: 32
+shuffle: True
+pin_memory: True
+drop_last: False

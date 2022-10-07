@@ -27,23 +27,31 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
             root='/home/ubuntu/data/coco/',
             annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
-            )
+        )
         return DataLoader(
             dataset=coco_train,
             batch_size=self.hparams.train_batch_size,
-            )
+        )
     
     def val_dataloader(self):
-        coco_val = ds.CocoCaptions(root='/home/ubuntu/data/coco/',)
+        coco_val = ds.CocoCaptions(
+            root='/home/ubuntu/data/coco/',
+            annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
+            transform=transforms.ToTensor(),
+        )
         return DataLoader(
             dataset=coco_val,
             batch_size=self.hparams.train_batch_size,
             )
     
     def test_dataloader(self):
-        coco_test = ds.CocoCaptions(root='/home/ubuntu/data/coco/',)
+        coco_test = ds.CocoCaptions(
+            root='/home/ubuntu/data/coco/',
+            annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
+            transform=transforms.ToTensor(),
+        )
         return DataLoader(
             dataset=coco_test,
             batch_size=self.hparams.train_batch_size,
-            )
+        )
 

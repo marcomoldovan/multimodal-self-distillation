@@ -1,0 +1,9 @@
+_target_: src.datamodules.imagenet_datamodule.ImagenetDataModule
+
+data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+meta_dir:
+num_workers: 0
+batch_size: 32
+shuffle: True
+pin_memory: True
+drop_last: False
