@@ -24,34 +24,40 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
     
     def train_dataloader(self):
         coco_train = ds.CocoCaptions(
-            root='/home/ubuntu/data/coco/',
-            annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
+            root=self.hparams.data_dir,
+            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
         )
         return DataLoader(
             dataset=coco_train,
             batch_size=self.hparams.train_batch_size,
+            collate_fn=self.collate_fn,
         )
     
     def val_dataloader(self):
         coco_val = ds.CocoCaptions(
-            root='/home/ubuntu/data/coco/',
-            annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
+            root=self.hparams.data_dir,
+            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
         )
         return DataLoader(
             dataset=coco_val,
-            batch_size=self.hparams.train_batch_size,
+            batch_size=self.hparams.val_batch_size,
+            collate_fn=self.collate_fn,
             )
     
     def test_dataloader(self):
         coco_test = ds.CocoCaptions(
-            root='/home/ubuntu/data/coco/',
-            annFile='/home/ubuntu/data/coco/annotations/captions_train2014.json',
+            root=self.hparams.data_dir,
+            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
         )
         return DataLoader(
             dataset=coco_test,
-            batch_size=self.hparams.train_batch_size,
+            batch_size=self.hparams.test_batch_size,
+            collate_fn=self.collate_fn,
         )
 
+
+    def collate_fn(self, batch):
+        return dict(text=None, image=None)

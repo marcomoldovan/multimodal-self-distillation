@@ -1,14 +1,9 @@
 _target_: src.datamodules.librispeech_datamodule.WikipediaDatamoduel
 
-data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+data_dir: E:/Datasets # ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+max_input_length: 8192
 train_batch_size: 256
 val_batch_size: 100
 test_batch_size: 100
 train_on_long_form_text: False
 pin_memory: True
-
-collator:
-  _target_: src.datamodules.components.librispeech_collator.LibriCollator
-  pretrained_tokenizer: deepmind/language-perceiver
-  train_on_long_form_text: ${train_on_long_form_text}
-  max_seq_length: 512

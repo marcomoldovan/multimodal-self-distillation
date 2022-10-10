@@ -22,21 +22,20 @@ class WikipediaDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir,
+        max_input_length,
         train_batch_size,
         val_batch_size,
         test_batch_size,
-        train_on_long_form_text=False,
         pin_memory=True):
         super().__init__()
         
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
                 
-        self.num_workers = os.cpu_count()
-        if self.hparams.load_preprocessed_data:
-            self.num_proc = 1
+        if os.name == 'nt':
+            self.num_workers = 0
         else:
-            self.num_proc = os.cpu_count()
+            self.num_workers = os.cpu_count()
             
         self.wiki_train: Optional[Dataset] = None
         self.wiki_val: Optional[Dataset] = None
@@ -59,22 +58,22 @@ class WikipediaDataModule(LightningDataModule):
         This method is called by lightning twice for `trainer.fit()` and `trainer.test()`, so be careful if you do a random split!
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
         
-        if self.hparams.train_on_long_form_text:
-            # Assign train/val datasets for use in dataloaders
-            if stage == "fit" or stage is None:
-                self.wiki_train, self.wiki_val = load_dataset("wikipedia", "20220301.en", cache_dir=self.hparams.data_dir)['train'] #TODO implement splitting
-                    
-            # Assign test dataset for use in dataloader(s)
-            if stage == "test" or stage is None:
-                self.wiki_test = load_dataset("wikipedia", "20220301.en", cache_dir=self.hparams.data_dir)['test']
+        # Assign train/val datasets for use in dataloaders
+        if stage == "fit" or stage is None:
+            self.wiki_train = load_dataset("wikipedia", "20220301.en", cache_dir=self.hparams.data_dir)['train'] #TODO implement splitting
             
-            # No dataset split defined for predict stage
-            if stage == "predict" or stage is None:
-                raise Exception("""This DataModule is not designed to be used for prediction.
-                                Please use the Spotify DataModule for prediction.""")
-        else:
-            raise NotImplementedError
-            #TODO: implement this
+        if stage == 'validate' or stage is None:
+            self.wiki_val
+                
+        # Assign test dataset for use in dataloader(s)
+        if stage == "test" or stage is None:
+            self.wiki_test
+        
+        # No dataset split defined for predict stage
+        if stage == "predict" or stage is None:
+            raise Exception("""This DataModule is not designed to be used for prediction.
+                            Please use the Spotify DataModule for prediction.""")
+
     
     
     def train_dataloader(self):
@@ -114,7 +113,8 @@ class WikipediaDataModule(LightningDataModule):
         tokens = self.tokenizer(
             batch,
             padding="longest",
+            truncation=True,
+            max_length=self.hparams.max_input_length,
             return_tensors="pt",
         )
-        
         return dict(text=tokens['input_ids'])

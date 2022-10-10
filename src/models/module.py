@@ -7,6 +7,7 @@ from torchmetrics import MaxMetric
 from torchmetrics.retrieval.reciprocal_rank import RetrievalMRR
 
 from src.models.components.ema import EMA
+from src.models.components.dispatcher import dispatch_inputs
 from src.models.components.outputs import TrainingStepOutput
 from src.models.components.criterion import LatentPredictionLoss
 from src.models.components.metrics import PretrainingMetric
@@ -93,11 +94,11 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> TrainingStepOutput:
-        #TODO adapt this for multimodal alignment
-        student_outputs = self.student(batch)
+        student_inputs, teacher_inputs = dispatch_inputs(batch)
+        student_outputs = self.student(student_inputs)
         with torch.no_grad():
             self.teacher.model.eval()
-            teacher_outputs = self.teacher.model(batch)
+            teacher_outputs = self.teacher.model(teacher_inputs)
         return TrainingStepOutput(student_outputs, teacher_outputs)
 
 
@@ -116,14 +117,15 @@ class LatentPredictionPretraining(pl.LightningModule):
             self.ema_step(self.student)
 
 
+    # in training/validation/test_step we can return dict with any tensors
+    # and then read it in some callback or in `training/validation/test_epoch_end()`` below
+    # remember to always return loss from `training_step()` or else backpropagation will fail!
+    
     def training_step(self, batch: Any, batch_idx: int):
         outputs, loss = self.step(batch)
         
         self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
 
-        # we can return here dict with any tensors
-        # and then read it in some callback or in `training_epoch_end()`` below
-        # remember to always return loss from `training_step()` or else backpropagation will fail!
         return {"loss": loss}
     
 

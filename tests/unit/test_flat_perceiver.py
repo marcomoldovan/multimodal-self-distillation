@@ -54,7 +54,7 @@ def test_text_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        tokens, _, _, _, token_batch, _, _, _ = get_input_features()
+        tokens, _, _, _, token_batch, _, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -90,7 +90,7 @@ def test_audio_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
+        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -126,7 +126,7 @@ def test_image_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, image_features, _, _, _, image_batch, _, _ = get_input_features()
+        _, image_features, _, _, _, image_batch, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -162,7 +162,7 @@ def test_video_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, _, video_features, _, _, _, video_batch = get_input_features()
+        _, _, _, video_features, _, _, _, video_batch = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -198,7 +198,7 @@ def test_image_text_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
+        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -234,7 +234,7 @@ def test_image_audio_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
+        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -270,7 +270,7 @@ def test_audio_text_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
+        _, _, audio_features, _, _, _, audio_batch, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -307,7 +307,7 @@ def test_video_audio_throughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        _, _, _, video_features, _, _, _, video_batch = get_input_features()
+        _, _, _, video_features, _, _, _, video_batch = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -343,7 +343,7 @@ def test_video_text_thoughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
+        tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents
@@ -379,7 +379,7 @@ def test_video_audio_text_thoughput():
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
         cfg = hydra.compose(config_name='flat_perceiver')
         model = hydra.utils.instantiate(cfg.model)
-        tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
+        tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         num_latents = cfg.model.num_latents
         d_latents  = cfg.model.d_latents

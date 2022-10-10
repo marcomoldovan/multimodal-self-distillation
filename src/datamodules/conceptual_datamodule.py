@@ -2,13 +2,15 @@ import os
 import io
 import urllib
 import PIL.Image
+import torch
+import datasets
 
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Optional
 
-
-from datasets import load_dataset
+from transformers import PerceiverFeatureExtractor, PerceiverTokenizer
+from datasets import load_dataset, load_from_disk
 from datasets.utils.file_utils import get_datasets_user_agent
 from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
@@ -33,40 +35,25 @@ class ConceptualCaptionsDataModule(LightningDataModule):
     """
     def __init__(
         self,
-        collator,
         data_dir,
         train_batch_size,
         val_batch_size,
         test_batch_size,
-        version='3M',
         pin_memory=True):
         super().__init__()
         
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
+                
+        self.num_workers = os.cpu_count() * 5
         
-        self.collator = collator
-        
-        self.num_workers = os.cpu_count()
-        if self.hparams.load_preprocessed_data:
-            self.num_proc = 1
-        else:
-            self.num_proc = os.cpu_count()
+        self.tokenizer = PerceiverTokenizer()
             
         self.cc_train: Optional[Dataset] = None
         self.cc_val: Optional[Dataset] = None
         self.cc_test: Optional[Dataset] = None
         
-        
-    def prepare_data(self):
-        """Download data if needed. This method is called only from a single GPU.
-        Do not use it to assign state (self.x = y)."""
-        if os.path.isdir(self.hparams.data_dir):
-            print("Data directory already exists, skipping download.")
-        else:
-            load_dataset('conceptual_captions', cache_dir=self.hparams.data_dir)
-            
-        
+          
     def fetch_single_image(self, image_url, timeout=None, retries=0):
         for _ in range(retries + 1):
             try:
@@ -90,17 +77,41 @@ class ConceptualCaptionsDataModule(LightningDataModule):
         return batch
         
         
+    def prepare_data(self):
+        """Download data if needed. This method is called only from a single GPU.
+        Do not use it to assign state (self.x = y)."""
+        if os.path.isfile(f'{self.hparams.data_dir}/full/dataset.arrow'):
+            print('Dataset inculding images already downloaded')
+        else:
+            load_dataset(
+                'conceptual_captions', split='validation', cache_dir=self.hparams.data_dir
+                ).map(
+                    function=self.fetch_images, batched=True, batch_size=100, fn_kwargs={"num_threads": self.num_workers}
+                    ).filter(
+                        lambda x: x['image'] is not None and x['image'].mode == 'RGB'
+                        ).save_to_disk(
+                            f'{self.hparams.data_dir}/full'
+                            )
+            
+            
     def setup(self, stage=None):
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
         This method is called by lightning twice for `trainer.fit()` and `trainer.test()`, so be careful if you do a random split!
         The `stage` can be used to differentiate whether it's called before trainer.fit()` or `trainer.test()`."""
-        
-        self.cc = load_dataset('conceptual_captions', cache_dir=self.hparams.data_dir)
-        self.cc = self.cc.map(self.fetch_images, batched=True, batch_size=100, fn_kwargs={"num_threads": self.num_workers})
-        
-        # Assign train/val/test datasets for use in dataloaders
-        if stage == "fit" or stage == "test" or stage is None:
-            self.cc_train, self.cc_val, self.cc_test = self.cc.split(split_ratio=(0.8, 0.1, 0.1))
+             
+        # Assign train/val/ datasets for use in dataloaders, data should already be downloaded
+        if stage == "fit" or stage is None:
+            self.cc_train = ConceptualCaptionsDataset(
+                load_from_disk(f'{self.hparams.data_dir}/full/', split='train', cache_dir=self.hparams.data_dir)
+                )
+            
+        if stage == "validate" or stage is None:
+            self.cc_val = ConceptualCaptionsDataset(
+                load_from_disk(f'{self.hparams.data_dir}/full/', split='validation', cache_dir=self.hparams.data_dir)
+                )
+            
+        if stage == "test" or stage is None:
+            raise Exception("""This dataset's test set it not available.""")
         
         if stage == "predict" or stage is None:
             raise Exception("""This DataModule is not designed to be used for prediction.
@@ -112,7 +123,7 @@ class ConceptualCaptionsDataModule(LightningDataModule):
             self.cc_train, 
             batch_size=self.hparams.train_batch_size, 
             shuffle=True, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -123,7 +134,7 @@ class ConceptualCaptionsDataModule(LightningDataModule):
             self.cc_val, 
             batch_size=self.hparams.val_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
@@ -134,8 +145,32 @@ class ConceptualCaptionsDataModule(LightningDataModule):
             self.cc_test, 
             batch_size=self.hparams.test_batch_size, 
             shuffle=False, 
-            collate_fn=self.collator, 
+            collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
             pin_memory=self.hparams.pin_memory
             )
         
+        
+    def collate_fn(self, batch):
+        return dict(
+            text=self.tokenizer([item['caption'] for item in batch], padding=True, return_tensors='pt')['input_ids'],
+            image=torch.cat([item['image'] for item in batch]),
+        )
+
+
+class ConceptualCaptionsDataset(Dataset):
+    def __init__(
+        self, 
+        hf_dataset: datasets.arrow_dataset.Dataset
+        ) -> None:
+        super().__init__()
+        self.dataset = hf_dataset
+        self.feature_extractor = PerceiverFeatureExtractor()
+        
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+        x = self.dataset[index]
+        x['image'] = self.feature_extractor(x['image'], return_tensors='pt')['pixel_values']
+        return x

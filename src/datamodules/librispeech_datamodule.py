@@ -70,7 +70,6 @@ class LibriSpeechDataModule(LightningDataModule):
             self.libri_train = load_dataset('librispeech_asr', 'clean', split=self.hparams.split, cache_dir=self.hparams.data_dir)
             self.libri_val = load_dataset('librispeech_asr', 'clean', split='validation', cache_dir=self.hparams.data_dir)
                 
-
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
             self.libri_test = load_dataset('librispeech_asr', 'clean', split='test', cache_dir=self.hparams.data_dir)

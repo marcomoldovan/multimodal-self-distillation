@@ -1,13 +1,13 @@
 import os
 import sys
 import hydra
+import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from src.models.components.preprocessor import PerceiverMultimodalPreprocessor
 from tests.helpers import get_input_features
 
-inputs = get_input_features()
 max_padding = 2
 
 
@@ -28,6 +28,8 @@ def test_preprocessor_text():
     with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
@@ -52,6 +54,8 @@ def test_preprocessor_audio():
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
         
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
         inputs_aud = dict(audio=inputs[2])
@@ -71,9 +75,11 @@ def test_preprocessor_image():
     """
     Test all reasonable combinations of inputs to the preprocessor.
     """
-    with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
+    with hydra.initialize(version_base='1.2', config_path='../../configs/model', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
@@ -88,7 +94,7 @@ def test_preprocessor_image():
         assert outputs_img_batch[0].size()[0] == 32
         assert outputs_img_batch[0].size()[1] == 50176
         assert outputs_img_batch[0].size()[2] == hidden_size + max_padding
-                
+                        
     
 def test_preprocessor_video():
     """
@@ -97,6 +103,8 @@ def test_preprocessor_video():
     with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
@@ -115,6 +123,8 @@ def test_preprocessor_image_text():
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
         
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
         inputs_txt_img = dict(text=inputs[0], image=inputs[1])
@@ -131,6 +141,8 @@ def test_preprocessor_image_audio():
     with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
@@ -149,6 +161,8 @@ def test_preprocessor_audio_text():
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
         
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
         inputs_aud_txt = dict(text=inputs[0], audio=inputs[2])
@@ -165,6 +179,8 @@ def test_preprocessor_video_audio():
     with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
@@ -183,6 +199,8 @@ def test_preprocessor_video_text():
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
         
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
+        
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         
         inputs_vid_text = dict(text=inputs[0], video=inputs[3])
@@ -199,6 +217,8 @@ def test_preprocessor_video_audio_text():
     with hydra.initialize(version_base='1.2', config_path='../../configs/tests', job_name="test_preprocessor_outputs"):
         cfg = hydra.compose(config_name='flat_perceiver')
         preprocessor = hydra.utils.instantiate(cfg.model.input_preprocessor)
+        
+        inputs = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
         
         hidden_size = cfg.model.input_preprocessor.modalities.text.d_model
         

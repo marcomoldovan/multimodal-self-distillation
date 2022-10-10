@@ -30,3 +30,5 @@ class PretrainingMetric:
         # self.val
         # self.test
         
+#TODO for image-text retrieval tasks we could use the metric Recall@K (R@K) like here: https://arxiv.org/pdf/2103.01913v2.pdf
+        

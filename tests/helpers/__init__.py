@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import io
 import requests
+import wikipedia
 import torch
 import numpy as np
 import soundfile as sf
@@ -27,10 +28,11 @@ def get_input_features(samples_per_patch):
     feature_extractor = PerceiverFeatureExtractor.from_pretrained('deepmind/vision-perceiver-conv')
     audio_feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
     
-    text = "The quick brown fox jumps over the lazy dog."
-    tokens = tokenizer(text, return_tensors='pt')['input_ids']
-    
     try:
+        article = wikipedia.page("Communism")
+        text = article.content
+        tokens = tokenizer(text, truncation=True, max_length=32768, return_tensors='pt')['input_ids']
+        
         url_image = "http://images.cocodataset.org/val2017/000000039769.jpg"
         image = Image.open(requests.get(url_image, stream=True).raw)
         image_features = reduce(feature_extractor(image, return_tensors='pt')['pixel_values'].unsqueeze(0), 'i b c h w -> b c h w', 'max')
@@ -48,6 +50,7 @@ def get_input_features(samples_per_patch):
     except Exception as e:
         log.error(f"Failed to create input features: {e}")
         log.error("Could not download the test files. Initializing with random tensors.")
+        tokens = torch.randn(1, 32768)
         image_features = torch.randn((1, 3, 224, 224))
         audio_features = torch.randn((1, 387648, 1))
         video_features = torch.randn((1, 16, 3, 224, 224))
