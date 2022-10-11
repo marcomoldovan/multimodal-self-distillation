@@ -11,7 +11,7 @@ from typing import List
 from src.models.module import LatentPredictionPretraining
 from src.models.components.perceiver import PerceiverModel
 from src.models.components.ema import EMA
-from src.models.components.outputs import ForwardPassOutput, TrainingStepOutput
+from src.models.components.outputs import ModelOutput, ForwardPassOutput
 from src.models.components.masking import mask_hidden_states
 from tests.helpers import get_input_features
 
@@ -66,7 +66,7 @@ def test_text_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -74,7 +74,7 @@ def test_text_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -102,7 +102,7 @@ def test_audio_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -110,7 +110,7 @@ def test_audio_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -138,7 +138,7 @@ def test_image_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -146,7 +146,7 @@ def test_image_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -174,7 +174,7 @@ def test_video_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -182,7 +182,7 @@ def test_video_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -210,7 +210,7 @@ def test_image_text_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -218,7 +218,7 @@ def test_image_text_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -246,7 +246,7 @@ def test_image_audio_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -254,7 +254,7 @@ def test_image_audio_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -282,7 +282,7 @@ def test_audio_text_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -290,7 +290,7 @@ def test_audio_text_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -319,7 +319,7 @@ def test_video_audio_throughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -327,7 +327,7 @@ def test_video_audio_throughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -355,7 +355,7 @@ def test_video_text_thoughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -363,7 +363,7 @@ def test_video_text_thoughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -391,7 +391,7 @@ def test_video_audio_text_thoughput():
         outputs = model(inputs)
         outputs_batch = model(inputs_batch)
         
-        assert isinstance(outputs, ForwardPassOutput)
+        assert isinstance(outputs, ModelOutput)
         assert isinstance(outputs.last_hidden_state, torch.Tensor)
         assert isinstance(outputs.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs.attentions[-1], torch.Tensor)
@@ -399,7 +399,7 @@ def test_video_audio_text_thoughput():
         assert outputs.last_hidden_state.size() == (1, num_latents, d_latents)
         assert len(outputs.hidden_states) == num_layers + 1
         
-        assert isinstance(outputs_batch, ForwardPassOutput)
+        assert isinstance(outputs_batch, ModelOutput)
         assert isinstance(outputs_batch.last_hidden_state, torch.Tensor)
         assert isinstance(outputs_batch.hidden_states[-1], torch.Tensor)
         assert isinstance(outputs_batch.attentions[-1], torch.Tensor)
@@ -424,14 +424,14 @@ def test_pl_module_forward():
         forward_outputs = pl_module.forward(inputs)
         forward_outputs_batch = pl_module.forward(inputs_batch)
         
-        assert isinstance(forward_outputs, TrainingStepOutput)
-        assert isinstance(forward_outputs.student_output, ForwardPassOutput)
-        assert isinstance(forward_outputs.teacher_output, ForwardPassOutput)
+        assert isinstance(forward_outputs, ForwardPassOutput)
+        assert isinstance(forward_outputs.student_output, ModelOutput)
+        assert isinstance(forward_outputs.teacher_output, ModelOutput)
         
         
-        assert isinstance(forward_outputs_batch, TrainingStepOutput)
-        assert isinstance(forward_outputs_batch.student_output, ForwardPassOutput)
-        assert isinstance(forward_outputs_batch.teacher_output, ForwardPassOutput)
+        assert isinstance(forward_outputs_batch, ForwardPassOutput)
+        assert isinstance(forward_outputs_batch.student_output, ModelOutput)
+        assert isinstance(forward_outputs_batch.teacher_output, ModelOutput)
     
     
 def test_pl_module_step():
@@ -450,9 +450,9 @@ def test_pl_module_step():
         step_outputs, loss = pl_module.step(inputs)
         step_outputs_batch, loss_batch = pl_module.step(inputs_batch)
         
-        assert isinstance(step_outputs, TrainingStepOutput)
+        assert isinstance(step_outputs, ForwardPassOutput)
         assert loss.size() == torch.Size([])
-        assert isinstance(step_outputs_batch, TrainingStepOutput)
+        assert isinstance(step_outputs_batch, ForwardPassOutput)
         assert loss.size() == torch.Size([])
     
 

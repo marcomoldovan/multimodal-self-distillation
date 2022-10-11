@@ -42,6 +42,7 @@ def test_imagenet():
         datamodule = hydra.utils.instantiate(cfg)
         assert isinstance(datamodule, ImagenetDataModule)
         
+        
 def test_tinyimagenet():
     """
     Test that the model can instantiate an ImageNetDatamodule object.
@@ -96,8 +97,8 @@ def test_conceptual_captions():
         datamodule.prepare_data()
         datamodule.setup(stage='validate')
         train_batch = next(iter(datamodule.train_dataloader()))
-        assert train_batch['text'].size()[0] == cfg.train_batch_size
-        assert train_batch['image'].size()[0] == cfg.train_batch_size
+        assert train_batch['text'].size()[0] == cfg.val_batch_size
+        assert train_batch['image'].size()[0] == cfg.val_batch_size
         
 test_conceptual_captions()
         

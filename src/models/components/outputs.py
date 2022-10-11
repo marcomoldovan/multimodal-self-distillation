@@ -2,7 +2,7 @@ import torch
 
 # output classes for bi-encoder and mm-encoder account for flexibility in case of additional byol or data2vec outputs
 
-class ForwardPassOutput:
+class ModelOutput:
     def __init__(
         self,
         last_hidden_state: torch.Tensor,
@@ -16,11 +16,13 @@ class ForwardPassOutput:
         self.cross_attentions = cross_attentions
         
 
-class TrainingStepOutput:
+class ForwardPassOutput:
     def __init__(
         self,
-        student_output: ForwardPassOutput = None,
-        teacher_output: ForwardPassOutput = None
+        student_output: ModelOutput = None,
+        teacher_output: ModelOutput = None,
+        align_fuse: dict = None,
     ) -> None:
         self.student_output = student_output
         self.teacher_output = teacher_output
+        self.align_fuse = align_fuse

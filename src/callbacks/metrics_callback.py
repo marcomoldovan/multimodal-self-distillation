@@ -3,10 +3,10 @@ import pytorch_lightning as pl
 from pytorch_lightning import Callback
 from pytorch_lightning.utilities import rank_zero_only
 
-from src.models.components.outputs import ModelOutputs
+from src.models.components.outputs import ForwardPassOutput
 
 
-class LoggingCallback(Callback):
+class MetricsCallback(Callback):
     """In PyTorch lighning logging metrics is agnostic to the logger used.
     Simply calling self.log() or pl_module.log() will log the metrics to all
     loggers passed to the trainer.
@@ -50,6 +50,10 @@ class LoggingCallback(Callback):
         dataloader_idx: int
         ) -> None:
         
+        fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
+        preds = fwd_outputs.student_output.last_hidden_state.detach().cpu()
+        
+        
         pl_module.log('val_loss', outputs['loss'], prog_bar=True, on_step=True, on_epoch=False)
         pl_module.log('val_mrr', outputs['mrr'], prog_bar=True, on_step=True, on_epoch=False)
            
@@ -64,6 +68,9 @@ class LoggingCallback(Callback):
         batch_idx: int, 
         dataloader_idx: int
         ) -> None:
+        
+        fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
+        preds = fwd_outputs.student_output.last_hidden_state.detach().cpu()
         
         pl_module.log('val_loss', outputs['loss'], prog_bar=True, on_step=True, on_epoch=False)
         pl_module.log('val_mrr', outputs['mrr'], prog_bar=True, on_step=True, on_epoch=False)

@@ -8,7 +8,7 @@ from torchmetrics.retrieval.reciprocal_rank import RetrievalMRR
 
 from src.models.components.ema import EMA
 from src.models.components.dispatcher import dispatch_inputs
-from src.models.components.outputs import TrainingStepOutput
+from src.models.components.outputs import ModelOutput, ForwardPassOutput
 from src.models.components.criterion import LatentPredictionLoss
 from src.models.components.metrics import PretrainingMetric
 from src.models.components.perceiver import PerceiverModel
@@ -93,13 +93,13 @@ class LatentPredictionPretraining(pl.LightningModule):
             self.teacher.step(self.student)
 
 
-    def forward(self, batch: Any) -> TrainingStepOutput:
-        student_inputs, teacher_inputs = dispatch_inputs(batch)
-        student_outputs = self.student(student_inputs)
+    def forward(self, batch: Any) -> ForwardPassOutput:
+        student_inputs, teacher_inputs, align_fuse, apply_mask = dispatch_inputs(batch, self.current_epoch)
+        student_outputs: ModelOutput = self.student(student_inputs, apply_mask=apply_mask)
         with torch.no_grad():
             self.teacher.model.eval()
-            teacher_outputs = self.teacher.model(teacher_inputs)
-        return TrainingStepOutput(student_outputs, teacher_outputs)
+            teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
+        return ForwardPassOutput(student_outputs, teacher_outputs)
 
 
     def step(self, batch: Any):
@@ -134,7 +134,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
 
-        return {"loss": loss}
+        return {"loss": loss, "forward_pass_output": outputs}
         
 
     def test_step(self, batch: Any, batch_idx: int):
@@ -142,7 +142,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
 
-        return {"loss": loss}
+        return {"loss": loss, "forward_pass_output": outputs}
 
 
     def configure_optimizers(self):

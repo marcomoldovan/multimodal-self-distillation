@@ -7,7 +7,7 @@ from transformers.modeling_outputs import BaseModelOutputWithCrossAttentions
 from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 
 from src.models.components.masking import mask_hidden_states
-from src.models.components.outputs import ForwardPassOutput
+from src.models.components.outputs import ModelOutput
 from src.utils import get_logger, get_parameter_dtype
 
 
@@ -646,10 +646,11 @@ class PerceiverModel(nn.Module):
         inputs: torch.FloatTensor,
         attention_mask: Optional[torch.FloatTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
+        apply_mask: Optional[bool] = True,
         output_attentions: Optional[bool] = True,
         output_hidden_states: Optional[bool] = True,
         return_dict: Optional[bool] = True,
-    ) -> ForwardPassOutput:
+    ) -> ModelOutput:
         r"""
         Args:
             inputs (`torch.FloatTensor`):
@@ -683,7 +684,7 @@ class PerceiverModel(nn.Module):
                     "Make sure to set d_model appropriately."
                 )
                 
-        if self.is_student:
+        if self.is_student and apply_mask:
             inputs = mask_hidden_states(
                 hidden_states=inputs,
                 attention_mask=attention_mask,
@@ -722,7 +723,7 @@ class PerceiverModel(nn.Module):
         )
         sequence_output = encoder_outputs[0]
 
-        return ForwardPassOutput(
+        return ModelOutput(
             last_hidden_state=sequence_output,
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,

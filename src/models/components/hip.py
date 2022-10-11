@@ -6,7 +6,7 @@ from torch import nn
 
 from src.models.components.preprocessor import PreprocessorType
 from src.models.components.masking import mask_hidden_states
-from src.models.components.outputs import ForwardPassOutput
+from src.models.components.outputs import ModelOutput
 
 
 class MultiHeadAttention(nn.Module):
@@ -396,7 +396,7 @@ class HiPModel(nn.Module):
     def set_student_status(self, is_student: bool):
         self.is_student = is_student
 
-    def forward(self, x, attention_mask=None):
+    def forward(self, x, attention_mask=None, apply_mask=True):
         x, _, _ = self.preprocessor(x)
         
         batch_size, seq_length, _ = x.size()
@@ -404,7 +404,7 @@ class HiPModel(nn.Module):
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length)))
         
-        if self.is_student:
+        if self.is_student and apply_mask:
             x = mask_hidden_states(
                 hidden_states=x,
                 attention_mask=attention_mask,
@@ -415,7 +415,7 @@ class HiPModel(nn.Module):
             
         x, hidden_states = self.hip(x, attention_mask)
         
-        return ForwardPassOutput(
+        return ModelOutput(
             last_hidden_state=x,
             hidden_states=hidden_states
         )
