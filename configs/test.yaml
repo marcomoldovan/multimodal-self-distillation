@@ -3,11 +3,11 @@
 # specify here default evaluation configuration
 defaults:
   - _self_
-  - datamodule: mnist.yaml # choose the datamodule for evaluation
-  - model: mnist.yaml
+  - datamodule: conceptual.yaml
+  - model: flat_perceiver.yaml
   - callbacks: null
   - logger: null
-  - trainer: default.yaml
+  - trainer: default.yaml # TODO testing should be done on one device, helps reproducibility: https://pytorch-lightning.readthedocs.io/en/latest/common/evaluation_intermediate.html#test-after-fit
   - log_dir: evaluation.yaml
 
   - experiment: null

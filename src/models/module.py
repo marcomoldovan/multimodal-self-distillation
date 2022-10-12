@@ -3,9 +3,6 @@ from typing import Any, Union
 import torch
 import pytorch_lightning as pl
 
-from torchmetrics import MaxMetric
-from torchmetrics.retrieval.reciprocal_rank import RetrievalMRR
-
 from src.models.components.ema import EMA
 from src.models.components.dispatcher import dispatch_inputs
 from src.models.components.outputs import ModelOutput, ForwardPassOutput
@@ -71,7 +68,10 @@ class LatentPredictionPretraining(pl.LightningModule):
         self.criterion = criterion
         
         # metric class that is configured depending on pretraining data
-        self.metric = metric
+        self.metric = metric #TODO delete this, it will be outsourced to a callback
+        
+        # how to align and fuse the incoming data
+        self.align_fuse = self.trainer.datamodule.align_fuse
         
         
     def ema_step(self):
@@ -94,12 +94,12 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> ForwardPassOutput:
-        student_inputs, teacher_inputs, align_fuse, apply_mask = dispatch_inputs(batch, self.current_epoch)
+        student_inputs, teacher_inputs, apply_mask = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
         student_outputs: ModelOutput = self.student(student_inputs, apply_mask=apply_mask)
         with torch.no_grad():
             self.teacher.model.eval()
             teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
-        return ForwardPassOutput(student_outputs, teacher_outputs)
+        return ForwardPassOutput(student_outputs, teacher_outputs, self.align_fuse)
 
 
     def step(self, batch: Any):

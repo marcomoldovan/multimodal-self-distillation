@@ -9,6 +9,7 @@ watch_model:
 upload_code_as_artifact:
   _target_: src.callbacks.artifacts_callbacks.UploadCodeAsArtifact
   code_dir: ${original_work_dir}/src
+  use_git: False
 
 upload_ckpts_as_artifact:
   _target_: src.callbacks.artifacts_callbacks.UploadCheckpointsAsArtifact

@@ -1,9 +1,10 @@
-from src.models.components.outputs import ModelOutput
+from typing import List, Dict, Tuple
 
 def dispatch_inputs(
-    batch: dict,
+    batch: Dict,
+    align_fuse: List[List[str], List[str]],
     epoch: int
-    ) -> tuple[dict, dict, bool]:
+    ) -> Tuple[dict, dict, bool]:
     """
     Returns the input dicts for student and teacher model.
     
@@ -26,9 +27,7 @@ def dispatch_inputs(
         teacher_inputs : (dict)
         apply_align : (bool)
     """
-    
-    align_fuse = batch['align_fuse']
-    
+        
     if align_fuse[0] == align_fuse[1]:
         apply_mask = True
         student_index = 0
@@ -50,4 +49,4 @@ def dispatch_inputs(
             student_inputs[k] = v
         elif k in align_fuse[teacher_index]:
             teacher_inputs[k] = v
-    return student_inputs, teacher_inputs, align_fuse, apply_mask
+    return student_inputs, teacher_inputs, apply_mask

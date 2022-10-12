@@ -3,7 +3,7 @@
 # specify here default training configuration
 defaults:
   - _self_
-  - datamodule: librispeech.yaml
+  - datamodule: conceptual.yaml
   - model: flat_perceiver.yaml
   - callbacks:
       - default.yaml

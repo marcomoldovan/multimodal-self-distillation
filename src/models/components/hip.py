@@ -7,6 +7,7 @@ from torch import nn
 from src.models.components.preprocessor import PreprocessorType
 from src.models.components.masking import mask_hidden_states
 from src.models.components.outputs import ModelOutput
+from src.models.components.pooler import Pooler
 
 
 class MultiHeadAttention(nn.Module):
@@ -387,6 +388,10 @@ class HiPModel(nn.Module):
         super().__init__()
         self.preprocessor = preprocessor
         self.hip = hip
+        self.pooler = Pooler(
+            hidden_size_in=self.hip.layers[-1].hidden_size, 
+            hidden_size_out=self.hip.layers[-1].hidden_size
+        )
         
         self.is_student = is_student
         self.is_training = is_training
@@ -415,7 +420,10 @@ class HiPModel(nn.Module):
             
         x, hidden_states = self.hip(x, attention_mask)
         
+        pooler_output = self.pooler(x)
+        
         return ModelOutput(
+            pooler_output=pooler_output,
             last_hidden_state=x,
             hidden_states=hidden_states
         )

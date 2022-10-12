@@ -5,7 +5,7 @@
 
 defaults:
   - override /datamodule: librispeech.yaml
-  - override /model: bi_encoder.yaml
+  - override /model: flat_perceiver.yaml
   - override /callbacks: default.yaml
   - override /logger: null
   - override /trainer: default.yaml
@@ -14,7 +14,7 @@ defaults:
 # this allows you to overwrite only specified parameters
 
 # name of the run determines folder name in logs
-name: "simple_dense_net"
+name: "flat_perceiver_librispeech"
 
 seed: 12345
 
@@ -35,4 +35,4 @@ datamodule:
 
 logger:
   wandb:
-    tags: ["mnist", "${name}"]
+    tags: ["multimodal", "librispeech", "${name}"]

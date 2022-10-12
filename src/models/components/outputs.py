@@ -5,11 +5,13 @@ import torch
 class ModelOutput:
     def __init__(
         self,
+        pooler_output: torch.Tensor,
         last_hidden_state: torch.Tensor,
         hidden_states: torch.Tensor,
         attentions: torch.Tensor,
         cross_attentions: torch.Tensor    
     ) -> None:
+        self.pooler_output = pooler_output
         self.last_hidden_state = last_hidden_state
         self.hidden_states = hidden_states
         self.attentions = attentions

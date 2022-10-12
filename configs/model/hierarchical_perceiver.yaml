@@ -88,19 +88,19 @@ model:
         num_self_attn_layers: 2
         num_self_attn_heads: 4
         num_latents: 128
-        channels: 128
+        hidden_size: 128
       - _target_: src.models.components.hip.BlockConfig
         num_groups: 4
         num_self_attn_layers: 2
         num_self_attn_heads: 8
         num_latents: 256
-        channels: 256
+        hidden_size: 256
       - _target_: src.models.components.hip.BlockConfig
         num_groups: 1
         num_self_attn_layers: 8
         num_self_attn_heads: 12
         num_latents: 256
-        channels: 384
+        hidden_size: 384
   is_student: False
   is_training: False
   mask_time_prob: 0.05

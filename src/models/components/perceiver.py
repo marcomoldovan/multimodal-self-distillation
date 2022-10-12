@@ -8,6 +8,7 @@ from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable
 
 from src.models.components.masking import mask_hidden_states
 from src.models.components.outputs import ModelOutput
+from src.models.components.pooler import Pooler
 from src.utils import get_logger, get_parameter_dtype
 
 
@@ -559,6 +560,8 @@ class PerceiverModel(nn.Module):
             kv_dim=input_preprocessor.num_channels if input_preprocessor is not None else d_model,
             use_query_residual=use_query_residual,
         )
+        
+        self.pooler = Pooler(d_latents, d_model)
     
     @property
     def dtype(self) -> torch.dtype:
@@ -722,8 +725,11 @@ class PerceiverModel(nn.Module):
             return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
+        
+        pooler_output = self.pooler(sequence_output)
 
         return ModelOutput(
+            pooler_output=pooler_output,
             last_hidden_state=sequence_output,
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,
