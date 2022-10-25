@@ -56,6 +56,8 @@ class TinyImagenetDataModule(pl.LightningDataModule):
         self.pin_memory = pin_memory
         self.drop_last = drop_last
         
+        self.align_fuse = [['image'], ['image']]
+        
         
     def _verify_splits(self, data_dir: str, split: str) -> None:
         dirs = os.listdir(data_dir)

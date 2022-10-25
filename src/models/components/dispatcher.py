@@ -26,7 +26,15 @@ def dispatch_inputs(
         student_inputs : (dict)
         teacher_inputs : (dict)
         apply_align : (bool)
+        labels : (dict)
     """
+    
+    #TODO implement special case where align_fuse has only one element, like [['image']], this is for the case we only want to use the model for inference and not use the teacher model
+    
+    if 'labels' in batch.keys():
+        labels = batch['labels']
+    else:
+        labels = None
         
     if align_fuse[0] == align_fuse[1]:
         apply_mask = True
@@ -49,4 +57,4 @@ def dispatch_inputs(
             student_inputs[k] = v
         elif k in align_fuse[teacher_index]:
             teacher_inputs[k] = v
-    return student_inputs, teacher_inputs, apply_mask
+    return student_inputs, teacher_inputs, apply_mask, labels #TODO needs to output what modality the student/teacher are seeing in respective epoch because this info is relevant for logging

@@ -51,6 +51,8 @@ class ImagenetDataModule(LightningDataModule):  # pragma: no cover
         self.shuffle = shuffle
         self.pin_memory = pin_memory
         self.drop_last = drop_last
+        
+        self.align_fuse = [['image'], ['image']]
 
     @property
     def num_classes(self) -> int:

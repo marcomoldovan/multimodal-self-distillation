@@ -24,7 +24,9 @@ class ForwardPassOutput:
         student_output: ModelOutput = None,
         teacher_output: ModelOutput = None,
         align_fuse: dict = None,
+        labels: torch.Tensor = None
     ) -> None:
         self.student_output = student_output
         self.teacher_output = teacher_output
         self.align_fuse = align_fuse
+        self.labels = labels

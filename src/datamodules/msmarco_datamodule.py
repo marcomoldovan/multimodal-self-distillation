@@ -44,6 +44,8 @@ class MSMARCOPassageDataModule(LightningDataModule):
         self.msmarco_val: Optional[Dataset] = None
         self.msmarco_test: Optional[Dataset] = None
         
+        self.align_fuse = [['text'], ['text']]
+        
         
     def prepare_data(self):
         """Download data if needed. This method is called only from a single GPU.

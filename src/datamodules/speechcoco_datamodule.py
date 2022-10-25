@@ -29,6 +29,8 @@ class SpeechCOCODataModule(LightningDataModule):
         self.val_dataset = None
         self.test_dataset = None
         
+        self.align_fuse = [['audio'], ['image']]
+        
     def prepare_data(self) -> None:
         pass
         

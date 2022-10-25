@@ -44,6 +44,8 @@ class LibriSpeechDataModule(LightningDataModule):
         self.libri_val: Optional[Dataset] = None
         self.libri_test: Optional[Dataset] = None
         
+        self.align_fuse = [['text'], ['audio']]
+        
         logging.set_verbosity(logging.CRITICAL)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
         self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')

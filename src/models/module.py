@@ -7,7 +7,6 @@ from src.models.components.ema import EMA
 from src.models.components.dispatcher import dispatch_inputs
 from src.models.components.outputs import ModelOutput, ForwardPassOutput
 from src.models.components.criterion import LatentPredictionLoss
-from src.models.components.metrics import PretrainingMetric
 from src.models.components.perceiver import PerceiverModel
 from src.models.components.hip import HiPModel
 from src.utils import exists
@@ -32,7 +31,6 @@ class LatentPredictionPretraining(pl.LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         criterion: LatentPredictionLoss,
-        metric: PretrainingMetric,
         ema_decay: float = 0.999,
         ema_end_decay: float = 0.9999,
         ema_anneal_end_step: int = 300000,
@@ -50,11 +48,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         # set student status for each model in order for masking to be applied only to the student model
         self.student.set_student_status(True)
         self.teacher.model.set_student_status(False)
-        
-        #TODO when saving the best checkpoint, the teacher model is not saved
-        #TODO clarify what val metric could be used during training. or are we only looking at the loss? 
-        #TODO Encapsulate metrics as a class so this module is agnostic to val matrics and 
-        
+                
         # EMA parameters
         self.ema_decay = ema_decay
         self.ema_end_decay = ema_end_decay
@@ -66,10 +60,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # loss function
         self.criterion = criterion
-        
-        # metric class that is configured depending on pretraining data
-        self.metric = metric #TODO delete this, it will be outsourced to a callback
-        
+                
         # how to align and fuse the incoming data
         self.align_fuse = self.trainer.datamodule.align_fuse
         
@@ -94,17 +85,21 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> ForwardPassOutput:
-        student_inputs, teacher_inputs, apply_mask = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
+        student_inputs, teacher_inputs, apply_mask, labels = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
         student_outputs: ModelOutput = self.student(student_inputs, apply_mask=apply_mask)
-        with torch.no_grad():
-            self.teacher.model.eval()
-            teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
-        return ForwardPassOutput(student_outputs, teacher_outputs, self.align_fuse)
+        
+        return ForwardPassOutput(student_output=student_outputs, align_fuse=self.align_fuse, labels=labels), teacher_inputs, apply_mask
 
 
     def step(self, batch: Any):
-        # forward pass
-        outputs = self.forward(batch)
+        # forward pass student
+        outputs, teacher_inputs, apply_mask = self.forward(batch)
+        
+        # forward pass teacher
+        with torch.no_grad():
+            self.teacher.model.eval()
+            teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
+            outputs(teacher_outputs=teacher_outputs)
         
         # compute loss
         loss = self.criterion(outputs.student_output.hidden_states, outputs.teacher_output.hidden_states)
@@ -124,25 +119,25 @@ class LatentPredictionPretraining(pl.LightningModule):
     def training_step(self, batch: Any, batch_idx: int):
         outputs, loss = self.step(batch)
         
-        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss}
+        return {"train/loss": loss, "forward_pass_output": outputs}
     
 
     def validation_step(self, batch: Any, batch_idx: int):
         outputs, loss = self.step(batch)
         
-        self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "forward_pass_output": outputs}
+        return {"val/loss": loss, "forward_pass_output": outputs}
         
 
     def test_step(self, batch: Any, batch_idx: int):
         outputs, loss = self.step(batch)
         
-        self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "forward_pass_output": outputs}
+        return {"test/loss": loss, "forward_pass_output": outputs}
 
 
     def configure_optimizers(self):

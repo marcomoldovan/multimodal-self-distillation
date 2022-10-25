@@ -43,6 +43,8 @@ class WikipediaDataModule(LightningDataModule):
         
         self.tokenizer = PerceiverTokenizer.from_pretrained('deepmind/language-perceiver')
         
+        self.align_fuse = [['text'], ['text']]
+        
         
     def prepare_data(self):
         """Download data if needed. This method is called only from a single GPU.

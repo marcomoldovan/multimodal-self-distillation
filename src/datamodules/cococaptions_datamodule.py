@@ -16,6 +16,8 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         self.save_hyperparameters()
         
+        self.align_fuse = [['text'], ['image']]
+        
     def setup(self, stage: str):
         raise NotImplementedError
     

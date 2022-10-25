@@ -23,9 +23,6 @@ criterion:
   reduction: 'mean'
   beta: 1.0
 
-metric:
-  _target_: src.models.components.metrics.PretrainingMetric
-
 model:
   _target_: src.models.components.hip.HiPModel
   preprocessor:

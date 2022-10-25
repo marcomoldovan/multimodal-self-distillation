@@ -53,6 +53,8 @@ class ConceptualCaptionsDataModule(LightningDataModule):
         self.cc_val: Optional[Dataset] = None
         self.cc_test: Optional[Dataset] = None
         
+        self.align_fuse = [['text'], ['image']]
+        
           
     def fetch_single_image(self, image_url, timeout=None, retries=0):
         for _ in range(retries + 1):
