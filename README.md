@@ -63,7 +63,7 @@ python train.py trainer.gpus=1
 Train model with chosen experiment configuration from [configs/experiment/unimodal](configs/experiment/unimodal)
 
 ```bash
-python train.py experiment=experiment_name.yaml
+python train.py experiment=unimodal/experiment_name.yaml
 ```
 
 You can override any parameter from command line like this
@@ -137,7 +137,7 @@ python train.py trainer.gpus=1
 Train model with chosen experiment configuration from [configs/experiment/multimodal](configs/experiment/multimodal)
 
 ```bash
-python train.py experiment=experiment_name.yaml
+python train.py experiment=multimodal/experiment_name.yaml
 ```
 
 You can override any parameter from command line like this
