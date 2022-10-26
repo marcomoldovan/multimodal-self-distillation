@@ -2,7 +2,7 @@
 
 wandb:
   _target_: pytorch_lightning.loggers.wandb.WandbLogger
-  project: "cross-modal-speech-segment-retrieval"
+  project: ""
   # name: ${name} #TODO give expressive name
   save_dir: "."
   offline: False # set True to store all logs only locally

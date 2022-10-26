@@ -42,7 +42,7 @@ def test_lightning_module_instantiation():
     Test that the model can instantiate a LightningModule object.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='lit_module')
+        cfg = hydra.compose(config_name='flat_perceiver')
         module = hydra.utils.instantiate(cfg)
         assert isinstance(module, LatentPredictionPretraining)
         

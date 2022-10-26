@@ -45,6 +45,7 @@ class LibriSpeechDataModule(LightningDataModule):
         self.libri_test: Optional[Dataset] = None
         
         self.align_fuse = [['text'], ['audio']]
+        self.metric = 'Recall@k'
         
         logging.set_verbosity(logging.CRITICAL)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
@@ -136,4 +137,4 @@ class LibriSpeechDataModule(LightningDataModule):
             return_tensors="pt",
         )
         
-        return dict(text=tokens["input_ids"], audio=audio["input_values"])
+        return dict(text=tokens["input_ids"], audio=audio["input_values"], align_fuse=self.align_fuse)

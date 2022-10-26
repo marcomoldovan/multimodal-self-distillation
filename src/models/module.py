@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Union, Tuple, Dict
 
 import torch
 import pytorch_lightning as pl
@@ -60,9 +60,6 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # loss function
         self.criterion = criterion
-                
-        # how to align and fuse the incoming data
-        self.align_fuse = self.trainer.datamodule.align_fuse
         
         
     def ema_step(self):
@@ -84,14 +81,21 @@ class LatentPredictionPretraining(pl.LightningModule):
             self.teacher.step(self.student)
 
 
-    def forward(self, batch: Any) -> ForwardPassOutput:
-        student_inputs, teacher_inputs, apply_mask, labels = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
-        student_outputs: ModelOutput = self.student(student_inputs, apply_mask=apply_mask)
+    def forward(self, batch: Any) -> Tuple[ForwardPassOutput, Dict, bool]:
+        dispatched_inputs = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
+        student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[2])
         
-        return ForwardPassOutput(student_output=student_outputs, align_fuse=self.align_fuse, labels=labels), teacher_inputs, apply_mask
+        outputs = ForwardPassOutput(
+            student_output=student_outputs, 
+            align_fuse=dispatched_inputs[2],
+            labels=dispatched_inputs[4], 
+            output_modalities=dispatched_inputs[5]
+        )
+        
+        return outputs, dispatched_inputs[1], dispatched_inputs[3]
 
 
-    def step(self, batch: Any):
+    def step(self, batch: Any) -> Tuple[ForwardPassOutput, torch.Tensor]:
         # forward pass student
         outputs, teacher_inputs, apply_mask = self.forward(batch)
         

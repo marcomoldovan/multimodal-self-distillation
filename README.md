@@ -60,7 +60,7 @@ python train.py trainer.gpus=0
 python train.py trainer.gpus=1
 ```
 
-Train model with chosen experiment configuration from [configs/experiment/](configs/experiment/)
+Train model with chosen experiment configuration from [configs/experiment/unimodal](configs/experiment/unimodal)
 
 ```bash
 python train.py experiment=experiment_name.yaml
@@ -134,7 +134,7 @@ python train.py trainer.gpus=0
 python train.py trainer.gpus=1
 ```
 
-Train model with chosen experiment configuration from [configs/experiment/](configs/experiment/)
+Train model with chosen experiment configuration from [configs/experiment/multimodal](configs/experiment/multimodal)
 
 ```bash
 python train.py experiment=experiment_name.yaml

@@ -2,9 +2,8 @@ from typing import List, Dict, Tuple
 
 def dispatch_inputs(
     batch: Dict,
-    align_fuse: List[List[str], List[str]],
     epoch: int
-    ) -> Tuple[dict, dict, bool]:
+    ) -> Tuple[dict, dict, bool, dict]:
     """
     Returns the input dicts for student and teacher model.
     
@@ -28,8 +27,12 @@ def dispatch_inputs(
         apply_align : (bool)
         labels : (dict)
     """
-    
-    #TODO implement special case where align_fuse has only one element, like [['image']], this is for the case we only want to use the model for inference and not use the teacher model
+        
+    if 'align_fuse' in batch.keys():
+        align_fuse = batch['align_fuse']
+    else:
+        # for inference when only the input data is given and nothing else
+        align_fuse = [[key] for key in batch.keys()]
     
     if 'labels' in batch.keys():
         labels = batch['labels']
@@ -40,6 +43,11 @@ def dispatch_inputs(
         apply_mask = True
         student_index = 0
         teacher_index = 1
+    elif len(align_fuse) == 1: 
+        # inference is assumed here with align_fuse like [['image']] or [['video', 'audio']]
+        apply_mask = False
+        student_index = 0
+        teacher_index = 0
     else:
         apply_mask = False
         if epoch % 2 == 0:
@@ -57,4 +65,7 @@ def dispatch_inputs(
             student_inputs[k] = v
         elif k in align_fuse[teacher_index]:
             teacher_inputs[k] = v
-    return student_inputs, teacher_inputs, apply_mask, labels #TODO needs to output what modality the student/teacher are seeing in respective epoch because this info is relevant for logging
+            
+            
+    output_modalities = {'student_output': student_inputs.keys(), 'teacher_output': teacher_inputs.keys()}
+    return student_inputs, teacher_inputs, align_fuse, apply_mask, labels, output_modalities

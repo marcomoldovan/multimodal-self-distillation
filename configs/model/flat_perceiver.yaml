@@ -27,7 +27,7 @@ model:
   _target_: src.models.components.perceiver.PerceiverModel
   is_training: True
   is_student: False
-  d_model: 704
+  d_model: 504
   num_latents: 784
   d_latents: 512
   num_blocks: 1
@@ -51,7 +51,7 @@ model:
     modalities:
       text:
         _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-        d_model: ${model.d_latents} 
+        d_model: 504 #! ${model.d_model}
         vocab_size: 262
         max_position_embeddings: 2048
       audio:
