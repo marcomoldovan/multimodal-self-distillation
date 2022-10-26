@@ -66,6 +66,6 @@ def dispatch_inputs(
         elif k in align_fuse[teacher_index]:
             teacher_inputs[k] = v
             
-            
     output_modalities = {'student_output': student_inputs.keys(), 'teacher_output': teacher_inputs.keys()}
+    
     return student_inputs, teacher_inputs, align_fuse, apply_mask, labels, output_modalities

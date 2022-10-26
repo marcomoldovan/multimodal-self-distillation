@@ -10,7 +10,7 @@ def k_nearest_neighbor(
     num_classes: int = 1000, 
     k: int = 20, 
     temperature: float = 0.1
-    ) -> Tuple(torch.Tensor, torch.Tensor, torch.Tensor):
+    ) -> Tuple:
     
     probabilities = []
     predictions = []

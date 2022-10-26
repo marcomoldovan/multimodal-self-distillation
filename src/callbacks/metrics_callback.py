@@ -34,6 +34,8 @@ class MetricsCallback(Callback):
         
         self.logging_interval = logging_interval
         
+        # TODO make this configurable for num_classes, HOW?
+        # Get the number of classes from the dataset, init the metrics in on_fit_start (??)
         self.val_acc_at_1 = Accuracy(top_k=1)
         self.val_acc_at_5 = Accuracy(top_k=5)
         self.test_acc_at_1 = Accuracy(top_k=1)
@@ -94,6 +96,7 @@ class MetricsCallback(Callback):
         
         fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
         
+        #TODO unclutter the dispatch function by getting output_modalities and align_fuse from the batch
         self.output_modalities = fwd_outputs.output_modalities
         self.align_fuse = fwd_outputs.align_fuse
         
@@ -109,7 +112,7 @@ class MetricsCallback(Callback):
         pl_module: pl.LightningModule
         ) -> None:
         
-        #TODO use self.output_modalities to properly asign these variables
+        #? use self.output_modalities to properly asign these variables
         features = torch.cat(self.val_student_preds, dim=0)
         queries = torch.cat(self.val_teacher_preds, dim=0)
         
@@ -124,13 +127,41 @@ class MetricsCallback(Callback):
             #TODO implement MRR
             raise NotImplementedError
         elif self.metric == Metric.ACCURACY:
-            probabilities, predictions, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
-            pl_module.log('val_accuracy@5', self.val_acc_at_5.compute(probabilities, labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
-            pl_module.log('val_accuracy@1', self.val_acc_at_1.compute(probabilities, labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, labels=labels)
+            pl_module.log(
+                'val_accuracy@5', 
+                self.val_acc_at_5.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
+            pl_module.log(
+                'val_accuracy@1', 
+                self.val_acc_at_1.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
         elif self.metric == Metric.RECALL:
-            probabilities, predictions, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
-            pl_module.log('val_recall@5', self.val_recall_at_5.compute(probabilities, labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
-            pl_module.log('val_recall@1', self.val_recall_at_1.compute(probabilities, labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
+            pl_module.log(
+                'val_recall@5', 
+                self.val_recall_at_5.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True)
+            
+            pl_module.log(
+                'val_recall@1', 
+                self.val_recall_at_1.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
         else:
             raise Exception('No metric specified or metric not supported')
         
@@ -166,4 +197,60 @@ class MetricsCallback(Callback):
         trainer: pl.Trainer, 
         pl_module: pl.LightningModule
         ) -> None:
-        raise NotImplementedError #TODO this should be the same as validation batch end
+        
+        #? use self.output_modalities to properly asign these variables
+        features = torch.cat(self.test_student_preds, dim=0)
+        queries = torch.cat(self.test_teacher_preds, dim=0)
+        
+        if set(self.test_labels) == {None}:
+            # we treat retrieval as classification with a unique class per sample
+            labels = torch.tensor(list(range(len(features))))
+        else:
+            labels = torch.cat(self.test_labels)
+        
+        if self.metric == Metric.MRR:
+            pl_module.log('test_mrr', self.val_mrr.compute(self.preds, self.labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
+            #TODO implement MRR
+            raise NotImplementedError
+        elif self.metric == Metric.ACCURACY:
+            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, labels=labels)
+            pl_module.log(
+                'test_accuracy@5', 
+                self.test_acc_at_5.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
+            pl_module.log(
+                'test_accuracy@1', 
+                self.test_acc_at_1.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
+        elif self.metric == Metric.RECALL:
+            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
+            pl_module.log(
+                'test_recall@5', 
+                self.test_recall_at_5.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
+            pl_module.log(
+                'test_recall@1', 
+                self.test_recall_at_1.compute(probabilities, labels), 
+                prog_bar=True, 
+                on_step=False, 
+                on_epoch=True, 
+                sync_dist=True
+                )
+        else:
+            raise Exception('No metric specified or metric not supported')
+        
+        self.val_student_preds = []
+        self.val_teacher_preds = []
+        self.val_labels = []
