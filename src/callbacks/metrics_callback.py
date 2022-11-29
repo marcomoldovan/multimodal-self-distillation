@@ -21,6 +21,9 @@ class MetricsCallback(Callback):
     Simply calling self.log() or pl_module.log() will log the metrics to all
     loggers passed to the trainer.
     
+    For image-text retrieval tasks we could use the metric Recall@K (R@K) like here:
+    https://arxiv.org/pdf/2103.01913v2.pdf
+    
     Other callbacks can be used to log files, data, checkpoints and artifacts
     specific to wandb.
 

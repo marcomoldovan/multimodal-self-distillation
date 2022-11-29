@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from src.models.components.outputs import ForwardPassOutput
+
 class LatentPredictionLoss(nn.Module):
     def __init__(
         self,
@@ -16,27 +18,35 @@ class LatentPredictionLoss(nn.Module):
         
     
     def forward(
-        self, 
-        hidden_states_student: torch.Tensor, 
-        hidden_states_teacher: torch.Tensor,
-        pooler_output_student: torch.Tensor,
-        pooler_output_teacher: torch.Tensor,
+        self,
+        fwd_output: ForwardPassOutput,
         ) -> torch.Tensor:
         
-        x = hidden_states_student[-1:][0]
+        x = fwd_output.student_output.hidden_states[-1:][0]
+        # take the last k transformer layers from the teacher
+        x = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:]
+        # Follow the same layer normalization for all modalities
+        x = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in x]
+        x = sum(x) / len(x)
+        # normalize targets
+        x = torch.layer_norm(x.float(), x.shape[-1:])
+    
+        
         
         with torch.no_grad():
             # take the last k transformer layers from the teacher
-            y = hidden_states_teacher[-self.num_hidden_layers_to_predict:] 
+            y = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:]
             # Follow the same layer normalization for all modalities
             y = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in y]
             y = sum(y) / len(y)
-            if True: # normalize targets
-                y = torch.layer_norm(y.float(), y.shape[-1:])
+            # normalize targets
+            y = torch.layer_norm(y.float(), y.shape[-1:])
                 
-            hidden_states_loss = self.loss_fn(x, y)
-            pooler_loss = self.loss_fn(pooler_output_student, pooler_output_teacher) #TODO: check if this is correct
-            
-            loss = hidden_states_loss + pooler_loss
+        hidden_states_loss = self.loss_fn(x, y)
+        
+        x_pooler = fwd_output.student_output.pooler_output
+        y_pooler = fwd_output.teacher_output.pooler_output
+        pooler_loss = self.loss_fn(x_pooler, y_pooler) #TODO: check if this is correct
+        
+        loss = hidden_states_loss + pooler_loss
                 
-        return loss

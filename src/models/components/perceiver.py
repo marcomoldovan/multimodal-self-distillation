@@ -561,7 +561,7 @@ class PerceiverModel(nn.Module):
             use_query_residual=use_query_residual,
         )
         
-        self.pooler = Pooler(d_latents, d_model)
+        self.pooler = Pooler(d_latents, d_latents)
     
     @property
     def dtype(self) -> torch.dtype:

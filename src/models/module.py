@@ -82,7 +82,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> Tuple[ForwardPassOutput, Dict, bool]:
-        dispatched_inputs = dispatch_inputs(batch, self.align_fuse, self.current_epoch)
+        dispatched_inputs = dispatch_inputs(batch, self.current_epoch)
         student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[2])
         
         outputs = ForwardPassOutput(
@@ -103,10 +103,10 @@ class LatentPredictionPretraining(pl.LightningModule):
         with torch.no_grad():
             self.teacher.model.eval()
             teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
-            outputs(teacher_outputs=teacher_outputs)
+            outputs.set_attributes(**{"teacher_output": teacher_outputs})
         
         # compute loss
-        loss = self.criterion(outputs.student_output.hidden_states, outputs.teacher_output.hidden_states)
+        loss = self.criterion(outputs)
         
         return outputs, loss
     

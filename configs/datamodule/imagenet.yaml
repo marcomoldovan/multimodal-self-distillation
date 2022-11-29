@@ -1,6 +1,6 @@
 _target_: src.datamodules.imagenet_datamodule.ImagenetDataModule
 
-data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+data_dir: ${data_dir}/imagenet # data_dir is specified in train.yaml or test.yaml
 meta_dir:
 num_workers: 0
 batch_size: 32

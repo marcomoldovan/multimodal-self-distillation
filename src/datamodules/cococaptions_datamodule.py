@@ -26,7 +26,7 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
     
     def train_dataloader(self):
         coco_train = ds.CocoCaptions(
-            root=self.hparams.data_dir,
+            root=f'{self.hparams.data_dir}/train2014',
             annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
         )
@@ -38,8 +38,8 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
     
     def val_dataloader(self):
         coco_val = ds.CocoCaptions(
-            root=self.hparams.data_dir,
-            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
+            root=f'{self.hparams.data_dir}/val2014',
+            annFile=f'{self.hparams.data_dir}/annotations/captions_val2014.json',
             transform=transforms.ToTensor(),
         )
         return DataLoader(
@@ -50,7 +50,7 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
     
     def test_dataloader(self):
         coco_test = ds.CocoCaptions(
-            root=self.hparams.data_dir,
+            root=f'{self.hparams.data_dir}/test2014',
             annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
             transform=transforms.ToTensor(),
         )

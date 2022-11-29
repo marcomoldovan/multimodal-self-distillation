@@ -20,9 +20,6 @@ def reciprocal_ranks(pairwise_similarity_results):
     
     return indexes_tensor, targets_tenosr, preds_tensor
 
-#TODO is it possible to use the same class for all metrics?
-# https://torchmetrics.readthedocs.io/en/stable/pages/overview.html
-# https://torchmetrics.readthedocs.io/en/stable/wrappers/metric_tracker.html
 class PretrainingMetric:
     def __init__(self):
         pass
@@ -30,5 +27,5 @@ class PretrainingMetric:
         # self.val
         # self.test
         
-#TODO for image-text retrieval tasks we could use the metric Recall@K (R@K) like here: https://arxiv.org/pdf/2103.01913v2.pdf
+
         

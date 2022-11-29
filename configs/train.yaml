@@ -3,11 +3,11 @@
 # specify here default training configuration
 defaults:
   - _self_
-  - datamodule: conceptual.yaml
+  - datamodule: librispeech.yaml
   - model: flat_perceiver.yaml
   - callbacks:
       - default.yaml
-      - artifacts.yaml
+      # - artifacts.yaml
       # - logging.yaml
   - profiler: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)

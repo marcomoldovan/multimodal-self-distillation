@@ -26,8 +26,8 @@ model:
   optimizer:
     lr: 0.001
   model:
-    d_model: 704
-    num_latents: 512
+    d_model: 504
+    num_latents: 384
     d_latents: 128
     num_self_attends_per_block: 8
 

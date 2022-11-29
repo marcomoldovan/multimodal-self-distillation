@@ -1,6 +1,6 @@
 msmarco_passage:
   _target_: src.datamodules.librispeech_datamodule.MSMARCOPassageDataModule
-  data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+  data_dir: ${data_dir}/msmarco_passages # data_dir is specified in train.yaml or test.yaml 
   train_batch_size: 256
   val_batch_size: 100
   test_batch_size: 100
@@ -10,7 +10,7 @@ msmarco_passage:
 
 msmarco_document:
   _target_: src.datamodules.librispeech_datamodule.MSMARCODocumentDataModule
-  data_dir: ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+  data_dir: ${data_dir}/msmarco_documents # data_dir is specified in train.yaml or test.yaml 
   train_batch_size: 256
   val_batch_size: 100
   test_batch_size: 100

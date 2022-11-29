@@ -12,7 +12,6 @@ optimizer:
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
-  monitor: train/loss
   mode: min
   factor: 0.1
   patience: 10
@@ -27,7 +26,7 @@ model:
   _target_: src.models.components.perceiver.PerceiverModel
   is_training: True
   is_student: False
-  d_model: 504
+  d_model: 704
   num_latents: 784
   d_latents: 512
   num_blocks: 1

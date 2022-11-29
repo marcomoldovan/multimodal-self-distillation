@@ -32,3 +32,7 @@ class ForwardPassOutput:
         self.align_fuse = align_fuse
         self.labels = labels
         self.output_modalities = output_modalities
+        
+    def set_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)

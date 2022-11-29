@@ -1,6 +1,6 @@
 _target_: src.datamodules.librispeech_datamodule.WikipediaDatamoduel
 
-data_dir: E:/Datasets # ${data_dir} # data_dir is specified in train.yaml or test.yaml #TODO is it really??
+data_dir: ${data_dir}/wikipedia # data_dir is specified in train.yaml or test.yaml
 max_input_length: 8192
 train_batch_size: 256
 val_batch_size: 100
