@@ -49,4 +49,6 @@ class LatentPredictionLoss(nn.Module):
         pooler_loss = self.loss_fn(x_pooler, y_pooler) #TODO: check if this is correct
         
         loss = hidden_states_loss + pooler_loss
+        
+        return loss
                 
