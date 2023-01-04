@@ -96,12 +96,17 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
         self.d_model = d_model
         self.embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
         self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
+        
+        #TODO the following line will probably break multi-GPU training, can we fix it?
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.embeddings.to(device)
+        self.position_embeddings.to(device)
 
     @property
     def num_channels(self) -> int:
         return self.d_model
 
-    def forward(self, inputs: torch.LongTensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True) -> torch.FloatTensor:
+    def forward(self, inputs: torch.LongTensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True) -> torch.FloatTensor:        
         embeddings = self.embeddings(inputs)
 
         seq_length = inputs.shape[1]
@@ -551,6 +556,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
                     pos_enc,
                     [batch_size, num_samples, self.num_channels - num_channels],
                 )
+                padding = padding.to(output.device)
                 output_padded = torch.cat([output, padding], dim=2)
 
                 # mask if required

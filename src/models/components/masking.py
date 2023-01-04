@@ -140,6 +140,7 @@ def mask_hidden_states(
 
         if mask_time_prob > 0.0 or mask_feature_prob > 0.0:
             masked_spec_embed = torch.nn.Parameter(torch.FloatTensor(hidden_size).uniform_())
+            masked_spec_embed = masked_spec_embed.to(hidden_states.device)
 
         # generate indices & apply SpecAugment along time axis
         batch_size, sequence_length, hidden_size = hidden_states.size()

@@ -602,6 +602,9 @@ class PerceiverModel(nn.Module):
             raise ValueError(
                 f"{self.dtype} not recognized. `dtype` should be set to either `torch.float32` or `torch.float16`"
             )
+            
+        # if device is on GPU, convert to CUDA tensor:
+        encoder_extended_attention_mask = encoder_extended_attention_mask.to(next(self.encoder.parameters()).device)
 
         return encoder_extended_attention_mask
     

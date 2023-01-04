@@ -39,7 +39,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False, ignore=['model', 'criterion']) 
+        self.save_hyperparameters(logger=False, ignore=['criterion']) 
         
         # student and teacher models is instantiated by Hydra
         self.student = model
@@ -60,7 +60,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # loss function
         self.criterion = criterion
-        
+                
         
     def ema_step(self):
         """
@@ -77,12 +77,13 @@ class LatentPredictionPretraining(pl.LightningModule):
                     self.ema_anneal_end_step,
                 )
             self.teacher.decay = decay
+            
         if self.teacher.decay < 1:
             self.teacher.step(self.student)
 
 
     def forward(self, batch: Any) -> Tuple[ForwardPassOutput, Dict, bool]:
-        dispatched_inputs = dispatch_inputs(batch, self.current_epoch)
+        dispatched_inputs = dispatch_inputs(batch, self.current_epoch)        
         student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[2])
         
         outputs = ForwardPassOutput(
@@ -102,6 +103,10 @@ class LatentPredictionPretraining(pl.LightningModule):
         # forward pass teacher
         with torch.no_grad():
             self.teacher.model.eval()
+            
+            #TODO how can we move the teacher model to the same device as the student model during initialization?
+            self.teacher.model.to(torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'))
+            
             teacher_outputs: ModelOutput = self.teacher.model(teacher_inputs, apply_mask=apply_mask)
             outputs.set_attributes(**{"teacher_output": teacher_outputs})
         
@@ -113,7 +118,7 @@ class LatentPredictionPretraining(pl.LightningModule):
     
     def on_train_batch_end(self, outputs: Any, batch: Any, batch_idx: int) -> None:
         if exists(self.teacher):
-            self.ema_step(self.student)
+            self.ema_step()
 
 
     # in training/validation/test_step we can return dict with any tensors
@@ -125,7 +130,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"train/loss": loss, "forward_pass_output": outputs}
+        return {"loss": loss, "forward_pass_output": outputs}
     
 
     def validation_step(self, batch: Any, batch_idx: int):
@@ -133,7 +138,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"val/loss": loss, "forward_pass_output": outputs}
+        return {"loss": loss, "forward_pass_output": outputs}
         
 
     def test_step(self, batch: Any, batch_idx: int):
@@ -141,7 +146,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         
         self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"test/loss": loss, "forward_pass_output": outputs}
+        return {"loss": loss, "forward_pass_output": outputs}
 
 
     def configure_optimizers(self):
@@ -157,7 +162,7 @@ class LatentPredictionPretraining(pl.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val/loss",
+                "monitor": "train/loss",
                 "interval": "epoch",
                 "frequency": 1,
             },

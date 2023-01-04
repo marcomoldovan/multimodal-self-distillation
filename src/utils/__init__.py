@@ -19,6 +19,18 @@ def exists(val):
 count_parameters = lambda model : {'requires_grad':sum(p.numel() for p in model.parameters() if p.requires_grad)/1e6,
                                    'does_not_require_grad':sum(p.numel() for p in model.parameters() if not p.requires_grad)/1e6}
     
+    
+# function that checks whether all parameters are on the same device and prints module names that are not
+def recursive_custom_device_check(module, device):
+    try:
+        for modules in module.named_children():
+            if next(modules[1].parameters()).device != device:
+                print(modules[0])
+                print(next(modules[1].parameters()).device)
+            recursive_custom_device_check(modules[1], device)
+    except StopIteration:
+        pass
+    
 
 def freeze_module(module):
     for param in module.parameters():

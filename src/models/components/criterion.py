@@ -22,9 +22,8 @@ class LatentPredictionLoss(nn.Module):
         fwd_output: ForwardPassOutput,
         ) -> torch.Tensor:
         
-        x = fwd_output.student_output.hidden_states[-1:][0]
-        # take the last k transformer layers from the teacher
-        x = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:]
+        # take the last transformer layers from the student
+        x = fwd_output.student_output.hidden_states[-1:][0] 
         # Follow the same layer normalization for all modalities
         x = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in x]
         x = sum(x) / len(x)
@@ -46,7 +45,7 @@ class LatentPredictionLoss(nn.Module):
         
         x_pooler = fwd_output.student_output.pooler_output
         y_pooler = fwd_output.teacher_output.pooler_output
-        pooler_loss = self.loss_fn(x_pooler, y_pooler) #TODO: check if this is correct
+        pooler_loss = self.loss_fn(x_pooler, y_pooler)
         
         loss = hidden_states_loss + pooler_loss
         
