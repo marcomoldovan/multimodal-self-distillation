@@ -8,6 +8,9 @@ from torchmetrics import Recall, Accuracy, RetrievalMRR
 
 from src.models.components.outputs import ForwardPassOutput
 from src.models.components.knn import k_nearest_neighbor
+from src import utils
+
+log = utils.get_logger(__name__)
 
 
 class Metric(Enum):
@@ -63,25 +66,6 @@ class MetricsCallback(Callback):
         self.metric = None
         self.align_fuse = None
         self.output_modalities = None
-        
-    
-    @rank_zero_only
-    def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        self.metric = pl_module.datamodule.metric
-        
-
-    @rank_zero_only
-    def on_train_batch_end(
-        self, 
-        trainer: pl.Trainer, 
-        pl_module: pl.LightningModule, 
-        outputs: Dict, 
-        batch: Any, 
-        batch_idx: int
-        ) -> None:
-        
-        pl_module.log('train_loss', outputs['loss'], prog_bar=True, on_step=True, on_epoch=False)
-        pl_module.log('train_mrr', outputs['mrr'], prog_bar=True, on_step=True, on_epoch=False)
     
     
     @rank_zero_only
@@ -102,10 +86,14 @@ class MetricsCallback(Callback):
         #TODO unclutter the dispatch function by getting output_modalities and align_fuse from the batch
         self.output_modalities = fwd_outputs.output_modalities
         self.align_fuse = fwd_outputs.align_fuse
+        self.metric = fwd_outputs.metric
         
-        self.val_student_preds.append(fwd_outputs.student_output.last_hidden_state.detach().cpu())
-        self.val_teacher_preds.append(fwd_outputs.teacher_output.last_hidden_state.detach().cpu())
-        self.val_labels.append(fwd_outputs.labels.detach().cpu()) 
+        self.val_student_preds.append(fwd_outputs.student_output.pooler_output.detach().cpu())
+        self.val_teacher_preds.append(fwd_outputs.teacher_output.pooler_output.detach().cpu())
+        if utils.exists(fwd_outputs.labels):
+            self.val_labels.append(fwd_outputs.labels.detach().cpu())
+        else:
+            self.val_labels.append(None)
         
     
     @rank_zero_only
@@ -125,12 +113,12 @@ class MetricsCallback(Callback):
         else:
             labels = torch.cat(self.val_labels)
         
-        if self.metric == Metric.MRR:
+        if self.metric == Metric.MRR.value:
             pl_module.log('val_mrr', self.val_mrr.compute(self.preds, self.labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
             #TODO implement MRR
             raise NotImplementedError
-        elif self.metric == Metric.ACCURACY:
-            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, labels=labels)
+        elif self.metric == Metric.ACCURACY.value:
+            probabilities, _, labels = k_nearest_neighbor(prediction_features=features, labels=labels)
             pl_module.log(
                 'val_accuracy@5', 
                 self.val_acc_at_5.compute(probabilities, labels), 
@@ -147,11 +135,11 @@ class MetricsCallback(Callback):
                 on_epoch=True, 
                 sync_dist=True
                 )
-        elif self.metric == Metric.RECALL:
-            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
+        elif self.metric == Metric.RECALL.value:
+            probabilities, _, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
             pl_module.log(
                 'val_recall@5', 
-                self.val_recall_at_5.compute(probabilities, labels), 
+                self.val_recall_at_5(probabilities, labels), #TODO should this be compute()?
                 prog_bar=True, 
                 on_step=False, 
                 on_epoch=True, 
@@ -159,7 +147,7 @@ class MetricsCallback(Callback):
             
             pl_module.log(
                 'val_recall@1', 
-                self.val_recall_at_1.compute(probabilities, labels), 
+                self.val_recall_at_1(probabilities, labels), #TODO should this be compute()?
                 prog_bar=True, 
                 on_step=False, 
                 on_epoch=True, 
@@ -188,10 +176,14 @@ class MetricsCallback(Callback):
         
         self.output_modalities = fwd_outputs.output_modalities
         self.align_fuse = fwd_outputs.align_fuse
+        self.metric = fwd_outputs.metric
         
-        self.test_student_preds.append(fwd_outputs.student_output.last_hidden_state.detach().cpu())
-        self.test_teacher_preds.append(fwd_outputs.teacher_output.last_hidden_state.detach().cpu())
-        self.test_labels.append(fwd_outputs.labels.detach().cpu()) 
+        self.test_student_preds.append(fwd_outputs.student_output.pooler_output.detach().cpu())
+        self.test_teacher_preds.append(fwd_outputs.teacher_output.pooler_output.detach().cpu())
+        if utils.exists(fwd_outputs.labels):
+            self.test_labels.append(fwd_outputs.labels.detach().cpu()) 
+        else:
+            self.test_labels.append(None)
     
     
     @rank_zero_only
@@ -211,12 +203,12 @@ class MetricsCallback(Callback):
         else:
             labels = torch.cat(self.test_labels)
         
-        if self.metric == Metric.MRR:
+        if self.metric == Metric.MRR.value:
             pl_module.log('test_mrr', self.val_mrr.compute(self.preds, self.labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
             #TODO implement MRR
             raise NotImplementedError
-        elif self.metric == Metric.ACCURACY:
-            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, labels=labels)
+        elif self.metric == Metric.ACCURACY.value:
+            probabilities, _, labels = k_nearest_neighbor(prediction_features=features, labels=labels)
             pl_module.log(
                 'test_accuracy@5', 
                 self.test_acc_at_5.compute(probabilities, labels), 
@@ -233,11 +225,11 @@ class MetricsCallback(Callback):
                 on_epoch=True, 
                 sync_dist=True
                 )
-        elif self.metric == Metric.RECALL:
-            probabilities, _, labels, _ = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
+        elif self.metric == Metric.RECALL.value:
+            probabilities, _, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
             pl_module.log(
                 'test_recall@5', 
-                self.test_recall_at_5.compute(probabilities, labels), 
+                self.test_recall_at_5(probabilities, labels), #TODO should this be compute()?
                 prog_bar=True, 
                 on_step=False, 
                 on_epoch=True, 
@@ -245,7 +237,7 @@ class MetricsCallback(Callback):
                 )
             pl_module.log(
                 'test_recall@1', 
-                self.test_recall_at_1.compute(probabilities, labels), 
+                self.test_recall_at_1(probabilities, labels), #TODO should this be compute()?
                 prog_bar=True, 
                 on_step=False, 
                 on_epoch=True, 

@@ -90,7 +90,8 @@ class LatentPredictionPretraining(pl.LightningModule):
             student_output=student_outputs, 
             align_fuse=dispatched_inputs[2],
             labels=dispatched_inputs[4], 
-            output_modalities=dispatched_inputs[5]
+            output_modalities=dispatched_inputs[5],
+            metric=dispatched_inputs[6]
         )
         
         return outputs, dispatched_inputs[1], dispatched_inputs[3]

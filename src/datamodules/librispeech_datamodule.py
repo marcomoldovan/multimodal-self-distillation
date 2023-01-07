@@ -137,4 +137,4 @@ class LibriSpeechDataModule(LightningDataModule):
             return_tensors="pt",
         )
         
-        return dict(text=tokens["input_ids"], audio=audio["input_values"], align_fuse=self.align_fuse)
+        return dict(text=tokens["input_ids"], audio=audio["input_values"], align_fuse=self.align_fuse, metric=self.metric)

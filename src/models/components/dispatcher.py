@@ -39,6 +39,11 @@ def dispatch_inputs(
     else:
         labels = None
         
+    if 'metric' in batch.keys():
+        metric = batch['metric']
+    else:
+        metric = None
+        
     if align_fuse[0] == align_fuse[1]:
         apply_mask = True
         student_index = 0
@@ -68,4 +73,4 @@ def dispatch_inputs(
             
     output_modalities = {'student_output': student_inputs.keys(), 'teacher_output': teacher_inputs.keys()}
     
-    return student_inputs, teacher_inputs, align_fuse, apply_mask, labels, output_modalities
+    return student_inputs, teacher_inputs, align_fuse, apply_mask, labels, output_modalities, metric

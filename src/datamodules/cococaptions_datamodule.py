@@ -17,6 +17,7 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
         self.save_hyperparameters()
         
         self.align_fuse = [['text'], ['image']]
+        self.metric = 'Recall@k'
         
     def setup(self, stage: str):
         raise NotImplementedError
@@ -62,4 +63,4 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
 
 
     def collate_fn(self, batch):
-        return dict(text=None, image=None)
+        return dict(text=None, image=None, align_fuse=self.align_fuse, metric=self.metric)

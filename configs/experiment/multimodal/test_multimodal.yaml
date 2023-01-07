@@ -6,7 +6,7 @@
 defaults:
   - override /datamodule: librispeech.yaml
   - override /model: flat_perceiver.yaml
-  - override /callbacks: default.yaml #metrics.yaml
+  - override /callbacks: metrics.yaml # default.yaml
   - override /logger: wandb.yaml
   - override /trainer: default.yaml
 
@@ -18,12 +18,12 @@ name: "flat_perceiver_librispeech"
 
 data_dir: E:/Datasets
 
-seed: 12345
+seed: 54321
 
 trainer:
   gpus: 1
   min_epochs: 1
-  max_epochs: 2
+  max_epochs: 10
   log_every_n_steps: 1
 
 model:
@@ -33,7 +33,7 @@ model:
     d_model: 504
     num_latents: 384
     d_latents: 128
-    num_self_attends_per_block: 8
+    num_self_attends_per_block: 6
 
 datamodule:
   train_batch_size: 20
@@ -43,8 +43,9 @@ datamodule:
 logger:
   wandb:
     project: "multimodal-self-distillation"
-    prefix: "test"
+    prefix: "test_metrics"
     tags: ["multimodal", "librispeech", "${name}"]
 
-# callbacks:
-#   logging_frequency: 1
+callbacks:
+  log_metrics:
+    logging_interval: 1

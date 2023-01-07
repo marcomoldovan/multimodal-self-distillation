@@ -26,7 +26,7 @@ def k_nearest_neighbor(
         zero_diagonal = False
         trim_preds = True
         
-    num_chunks = 100
+    num_chunks = 10 #TODO this was 100 but had to be reduced to 10 to avoid OOM for local testing
     num_test_samples = query_features.size()[0]
     samples_per_chunk = num_test_samples // num_chunks
         
