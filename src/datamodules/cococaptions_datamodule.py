@@ -63,4 +63,5 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
 
 
     def collate_fn(self, batch):
+        print(batch)
         return dict(text=None, image=None, align_fuse=self.align_fuse, metric=self.metric)
