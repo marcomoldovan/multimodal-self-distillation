@@ -2,6 +2,7 @@ _target_: src.models.module.LatentPredictionPretraining
 ema_decay: 0.999
 ema_end_decay: 0.9999
 ema_anneal_end_step: 300000
+switch_student_teacher_per_epoch: false
 
 optimizer:
   _target_: torch.optim.Adam

@@ -2,7 +2,8 @@ from typing import List, Dict, Tuple
 
 def dispatch_inputs(
     batch: Dict,
-    epoch: int
+    epoch: int,
+    switch_teacher_student: bool = False,
     ) -> Tuple[dict, dict, bool, dict]:
     """
     Returns the input dicts for student and teacher model.
@@ -45,6 +46,7 @@ def dispatch_inputs(
         metric = None
         
     if align_fuse[0] == align_fuse[1]:
+        # unimodal case, e.g. [['text'], ['text']] or [['image'], ['image']]
         apply_mask = True
         student_index = 0
         teacher_index = 1
@@ -54,13 +56,18 @@ def dispatch_inputs(
         student_index = 0
         teacher_index = 0
     else:
+        # multimodal case, e.g. [['text'], ['video', 'audio']] or [['text'], ['audio']]
         apply_mask = False
-        if epoch % 2 == 0:
+        if switch_teacher_student:
+            if epoch % 2 == 0:
+                student_index = 0
+                teacher_index = 1
+            else:
+                student_index = 1
+                teacher_index = 0
+        else:
             student_index = 0
             teacher_index = 1
-        else:
-            student_index = 1
-            teacher_index = 0
         
     student_inputs = {}
     teacher_inputs = {}

@@ -6,7 +6,7 @@
 defaults:
   - override /datamodule: librispeech.yaml
   - override /model: flat_perceiver.yaml
-  - override /callbacks: metrics.yaml # default.yaml
+  - override /callbacks: metrics.yaml
   - override /logger: wandb.yaml
   - override /trainer: default.yaml
 
@@ -27,6 +27,7 @@ trainer:
   log_every_n_steps: 1
 
 model:
+  switch_student_teacher_per_epoch: false
   optimizer:
     lr: 0.001
   model:

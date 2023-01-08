@@ -34,6 +34,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         ema_decay: float = 0.999,
         ema_end_decay: float = 0.9999,
         ema_anneal_end_step: int = 300000,
+        switch_student_teacher_per_epoch: bool = False,
     ):
         super().__init__()
 
@@ -60,6 +61,9 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # loss function
         self.criterion = criterion
+        
+        # whether to switch student and teacher model every epoch in multimodal training
+        self.switch_student_teacher_per_epoch = switch_student_teacher_per_epoch
                 
         
     def ema_step(self):
@@ -83,7 +87,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
 
     def forward(self, batch: Any) -> Tuple[ForwardPassOutput, Dict, bool]:
-        dispatched_inputs = dispatch_inputs(batch, self.current_epoch)        
+        dispatched_inputs = dispatch_inputs(batch, self.current_epoch, self.switch_student_teacher_per_epoch)        
         student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[2])
         
         outputs = ForwardPassOutput(
