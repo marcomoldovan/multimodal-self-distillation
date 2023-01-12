@@ -287,6 +287,7 @@ class PerceiverBlock(nn.Module):
     ):
         super().__init__()
         self.num_groups = num_groups
+        self.hidden_size = hidden_size
 
         self.latents = nn.Parameter(torch.randn(num_groups, num_latents, hidden_size))
         self.cross_attention = CrossAttention(
@@ -407,7 +408,7 @@ class HiPModel(nn.Module):
         batch_size, seq_length, _ = x.size()
         
         if attention_mask is None:
-            attention_mask = torch.ones(((batch_size, seq_length)))
+            attention_mask = torch.ones(((batch_size, seq_length))) #TODO move to CUDA
         
         if self.is_student and apply_mask:
             x = mask_hidden_states(

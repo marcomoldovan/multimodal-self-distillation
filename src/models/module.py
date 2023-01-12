@@ -88,7 +88,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
     def forward(self, batch: Any) -> Tuple[ForwardPassOutput, Dict, bool]:
         dispatched_inputs = dispatch_inputs(batch, self.current_epoch, self.switch_student_teacher_per_epoch)        
-        student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[2])
+        student_outputs: ModelOutput = self.student(dispatched_inputs[0], apply_mask=dispatched_inputs[3])
         
         outputs = ForwardPassOutput(
             student_output=student_outputs, 

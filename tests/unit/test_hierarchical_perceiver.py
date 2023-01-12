@@ -31,7 +31,7 @@ def test_ema_instatiation():
     Test that the model can instantiate an EMA object.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         ema = EMA(model)
         assert isinstance(ema, EMA)
@@ -42,7 +42,7 @@ def test_lightning_module_instantiation():
     Test that the model can instantiate a LightningModule object.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         module = hydra.utils.instantiate(cfg)
         assert isinstance(module, LatentPredictionPretraining)
         
@@ -52,7 +52,7 @@ def test_text_throughput():
     Test that the model can process text.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, _, _, token_batch, _, _, _ = get_input_features()
         
@@ -88,7 +88,7 @@ def test_audio_throughput():
     Test that the model can process audio.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
@@ -124,7 +124,7 @@ def test_image_throughput():
     Test that the model can process images.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, image_features, _, _, _, image_batch, _, _ = get_input_features()
         
@@ -160,7 +160,7 @@ def test_video_throughput():
     Test that the model can process video.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, _, video_features, _, _, _, video_batch = get_input_features()
         
@@ -196,7 +196,7 @@ def test_image_text_throughput():
     Test that the model can process image-text pairs.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
@@ -232,7 +232,7 @@ def test_image_audio_throughput():
     Test that the model can process audio-text pairs.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
@@ -268,7 +268,7 @@ def test_audio_text_throughput():
     Test that the model can process audio-text pairs.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, audio_features, _, _, _, audio_batch, _ = get_input_features()
         
@@ -305,7 +305,7 @@ def test_video_audio_throughput():
     Test that the model can process video.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         _, _, _, video_features, _, _, _, video_batch = get_input_features()
         
@@ -341,7 +341,7 @@ def test_video_text_thoughput():
     Test that the model can process multimodal data.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
         
@@ -377,7 +377,7 @@ def test_video_audio_text_thoughput():
     Test that the model can process multimodal data.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         model = hydra.utils.instantiate(cfg.model)
         tokens, _, audio_features, video_features, token_batch, _, audio_batch, video_batch = get_input_features()
         
@@ -413,7 +413,7 @@ def test_pl_module_forward():
     Test that the model can process outputs.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         pl_module = hydra.utils.instantiate(cfg)
         
         tokens, _, _, _, token_batch, _, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
@@ -439,7 +439,7 @@ def test_pl_module_step():
     Test that the model can process loss functions.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         pl_module = hydra.utils.instantiate(cfg)
         
         tokens, _, _, _, token_batch, _, _, _ = get_input_features(cfg.model.input_preprocessor.modalities.audio.samples_per_patch)
@@ -461,7 +461,7 @@ def test_latent_masking():
     Test that the model can process latent masks.
     """
     with hydra.initialize(version_base='1.1', config_path='../../configs/model', job_name="test_perceiver_instantiation"):
-        cfg = hydra.compose(config_name='flat_perceiver')
+        cfg = hydra.compose(config_name='hierarchical_perceiver')
         pl_module = hydra.utils.instantiate(cfg)
         
         assert pl_module.student.is_student == True

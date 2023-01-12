@@ -1,0 +1,46 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=multimodal/test_multimodal
+
+defaults:
+  - override /datamodule: librispeech.yaml
+  - override /model: hierarchical_perceiver.yaml
+  - override /callbacks: metrics.yaml
+  - override /logger: wandb.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+# name of the run determines folder name in logs
+name: "flat_perceiver_librispeech"
+
+data_dir: E:/Datasets
+
+seed: 69420
+
+trainer:
+  gpus: 1
+  min_epochs: 1
+  max_epochs: 10
+  log_every_n_steps: 1
+
+model:
+  optimizer:
+    lr: 0.01
+
+datamodule:
+  train_batch_size: 20
+  val_batch_size: 20
+  test_batch_size: 20
+
+logger:
+  wandb:
+    project: "multimodal-self-distillation"
+    prefix: "hip_librispeech"
+    tags: ["multimodal", "librispeech", "hip", "${name}"]
+
+callbacks:
+  log_metrics:
+    logging_interval: 1

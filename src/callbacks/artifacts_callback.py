@@ -12,7 +12,7 @@ from src.utils import get_wandb_logger
 class WatchModel(Callback):
     """Make wandb watch model at the beginning of the run."""
 
-    def __init__(self, log: str = "gradients", log_freq: int = 100):
+    def __init__(self, log: str = "all", log_freq: int = 10):
         self.log = log
         self.log_freq = log_freq
 
@@ -38,7 +38,7 @@ class UploadCodeAsArtifact(Callback):
     @rank_zero_only
     def on_train_start(self, trainer, pl_module):
         logger = get_wandb_logger(trainer=trainer)
-        experiment = logger.experiment
+        experiment = logger.experiment 
 
         code = wandb.Artifact("project-source", type="code")
 

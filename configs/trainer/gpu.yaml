@@ -2,6 +2,6 @@ defaults:
   - default.yaml
 
 gpus: 1
-accumulate_grad_batches: 4
-precision: 16
+# accumulate_grad_batches: 4
+# precision: 16
 sync_batchnorm: True

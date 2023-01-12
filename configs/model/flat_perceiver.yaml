@@ -11,11 +11,9 @@ optimizer:
   weight_decay: 0.0005
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
   _partial_: true
-  mode: min
-  factor: 0.1
-  patience: 10
+  T_0: 10
 
 criterion:
   _target_: src.models.components.criterion.LatentPredictionLoss

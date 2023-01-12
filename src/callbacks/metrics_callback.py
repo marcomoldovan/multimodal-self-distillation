@@ -35,22 +35,20 @@ class MetricsCallback(Callback):
     """
     def __init__(
         self, 
+        top_k: list = [1, 10, 100],
         logging_interval: int = 10,
     ) -> None:
         
+        self.top_k = top_k
         self.logging_interval = logging_interval
         
-        # TODO make this configurable for num_classes, HOW?
-        # Get the number of classes from the dataset, init the metrics in on_fit_start (??)
-        self.val_acc_at_1 = Accuracy(top_k=1)
-        self.val_acc_at_5 = Accuracy(top_k=5)
-        self.test_acc_at_1 = Accuracy(top_k=1)
-        self.test_acc_at_5 = Accuracy(top_k=5)
+        # TODO make this configurable for num_classes, HOW? --> see if we can access datamodules before training start and get num_classes from there
         
-        self.val_recall_at_1 = Recall(top_k=1)
-        self.val_recall_at_5 = Recall(top_k=5)
-        self.test_recall_at_1 = Recall(top_k=1)
-        self.test_recall_at_5 = Recall(top_k=5)
+        self.val_accuracy = None
+        self.test_accuracy = None
+        
+        self.val_recall = {k: Recall(top_k=k) for k in top_k}
+        self.test_recall = {k: Recall(top_k=k) for k in top_k}
         
         self.val_mrr = RetrievalMRR()
         self.test_mrr = RetrievalMRR()
@@ -83,7 +81,8 @@ class MetricsCallback(Callback):
         
         fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
         
-        #TODO unclutter the dispatch function by getting output_modalities and align_fuse from the batch
+        if self.val_accuracy is None and fwd_outputs.num_classes is not None and Metric.ACCURACY.value in self.metric:
+            self.val_accuracy = {k: Accuracy(top_k=k, num_classes=fwd_outputs.num_classes) for k in self.top_k}
         self.output_modalities = fwd_outputs.output_modalities
         self.align_fuse = fwd_outputs.align_fuse
         self.metric = fwd_outputs.metric
@@ -113,46 +112,32 @@ class MetricsCallback(Callback):
         else:
             labels = torch.cat(self.val_labels)
         
-        if self.metric == Metric.MRR.value:
+        if Metric.MRR.value in self.metric:
             pl_module.log('val_mrr', self.val_mrr.compute(self.preds, self.labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
             #TODO implement MRR
             raise NotImplementedError
-        elif self.metric == Metric.ACCURACY.value:
+        if Metric.ACCURACY.value in self.metric: 
             probabilities, _, labels = k_nearest_neighbor(prediction_features=features, labels=labels)
-            pl_module.log(
-                'val_accuracy@5', 
-                self.val_acc_at_5.compute(probabilities, labels), 
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
-            pl_module.log(
-                'val_accuracy@1', 
-                self.val_acc_at_1.compute(probabilities, labels), 
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
-        elif self.metric == Metric.RECALL.value:
+            for key, value in self.val_accuracy.items():
+                pl_module.log(
+                    f'val_accuracy@{key}',
+                    value(probabilities, labels),
+                    prog_bar=True, 
+                    on_step=False, 
+                    on_epoch=True, 
+                    sync_dist=True
+                    )
+        if Metric.RECALL.value in self.metric:
             probabilities, _, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
-            pl_module.log(
-                'val_recall@5', 
-                self.val_recall_at_5(probabilities, labels), #TODO should this be compute()?
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True)
-            
-            pl_module.log(
-                'val_recall@1', 
-                self.val_recall_at_1(probabilities, labels), #TODO should this be compute()?
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
+            for key, value in self.val_recall.items():
+                pl_module.log(
+                    f'val_recall@{key}',
+                    value(probabilities, labels),
+                    prog_bar=True, 
+                    on_step=False, 
+                    on_epoch=True, 
+                    sync_dist=True
+                    )
         else:
             raise Exception('No metric specified or metric not supported')
         
@@ -174,6 +159,8 @@ class MetricsCallback(Callback):
         
         fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
         
+        if self.test_accuracy is None and fwd_outputs.num_classes is not None and Metric.ACCURACY.value in self.metric:
+            self.test_accuracy = {k: Accuracy(top_k=k, num_classes=fwd_outputs.num_classes) for k in self.top_k}
         self.output_modalities = fwd_outputs.output_modalities
         self.align_fuse = fwd_outputs.align_fuse
         self.metric = fwd_outputs.metric
@@ -203,46 +190,32 @@ class MetricsCallback(Callback):
         else:
             labels = torch.cat(self.test_labels)
         
-        if self.metric == Metric.MRR.value:
+        if Metric.MRR.value in self.metric:
             pl_module.log('test_mrr', self.val_mrr.compute(self.preds, self.labels), prog_bar=True, on_step=False, on_epoch=True, sync_dist=True)
             #TODO implement MRR
             raise NotImplementedError
-        elif self.metric == Metric.ACCURACY.value:
+        if Metric.ACCURACY.value in self.metric:
             probabilities, _, labels = k_nearest_neighbor(prediction_features=features, labels=labels)
-            pl_module.log(
-                'test_accuracy@5', 
-                self.test_acc_at_5.compute(probabilities, labels), 
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
-            pl_module.log(
-                'test_accuracy@1', 
-                self.test_acc_at_1.compute(probabilities, labels), 
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
-        elif self.metric == Metric.RECALL.value:
+            for key, value in self.test_accuracy.items():
+                pl_module.log(
+                    f'test_accuracy@{key}',
+                    value(probabilities, labels),
+                    prog_bar=True, 
+                    on_step=False, 
+                    on_epoch=True, 
+                    sync_dist=True
+                    )
+        if Metric.RECALL.value in self.metric:
             probabilities, _, labels = k_nearest_neighbor(prediction_features=features, query_features=queries, labels=labels)
-            pl_module.log(
-                'test_recall@5', 
-                self.test_recall_at_5(probabilities, labels), #TODO should this be compute()?
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
-            pl_module.log(
-                'test_recall@1', 
-                self.test_recall_at_1(probabilities, labels), #TODO should this be compute()?
-                prog_bar=True, 
-                on_step=False, 
-                on_epoch=True, 
-                sync_dist=True
-                )
+            for key, value in self.test_recall.items():
+                pl_module.log(
+                    f'test_recall@{key}',
+                    value(probabilities, labels),
+                    prog_bar=True, 
+                    on_step=False, 
+                    on_epoch=True, 
+                    sync_dist=True
+                    )
         else:
             raise Exception('No metric specified or metric not supported')
         

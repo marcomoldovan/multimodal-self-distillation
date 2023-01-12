@@ -7,8 +7,8 @@ defaults:
   - model: flat_perceiver.yaml
   - callbacks:
       - default.yaml
-      # - artifacts.yaml
-      # - logging.yaml
+      - artifacts.yaml
+      - metrics.yaml
   - profiler: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default.yaml
