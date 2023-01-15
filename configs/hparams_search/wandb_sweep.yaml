@@ -3,9 +3,9 @@
 
 program: run.py
 
-project: lightning-hydra-template
+project: multimodal-self-distillation
 
-description: "MNIST wandb sweep"
+description: "Multimodal-Self Distillation wandb sweep"
 
 method: bayes
 

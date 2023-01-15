@@ -1,0 +1,6 @@
+defaults:
+  - default.yaml
+
+log_media:
+  _target_: src.callbacks.media_callback.MediaCallback
+  log_every_n_steps: 10

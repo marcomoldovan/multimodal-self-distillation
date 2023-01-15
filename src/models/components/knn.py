@@ -9,13 +9,14 @@ def k_nearest_neighbor(
     labels: torch.Tensor = None, 
     num_classes: int = 1000, 
     k: int = 20, 
-    temperature: float = 0.1
+    chunking: bool = True,
     ) -> Tuple:
     
     probabilities = []
     predictions = []
         
-    num_classes = len(set(list(labels.numpy())))
+    temperature = 0.1
+    num_classes = len(set(list(labels.numpy()))) #TODO this is a hacky and probably wrong if we compute accuracy after this
     
     if query_features is None:
         # means that similarity is computed between prediction features and itself
@@ -26,45 +27,79 @@ def k_nearest_neighbor(
         zero_diagonal = False
         trim_preds = True
         
-    num_chunks = 10 #TODO this was 100 but had to be reduced to 10 to avoid OOM for local testing
-    num_test_samples = query_features.size()[0]
-    samples_per_chunk = num_test_samples // num_chunks
+    if chunking:    
+        num_chunks = 10 # this was 100 but had to be reduced to 10 to avoid OOM for local testing (was it really??)
+        num_test_samples = query_features.size()[0]
+        samples_per_chunk = num_test_samples // num_chunks
+            
+        for idx in range(0, num_test_samples, samples_per_chunk):
+            
+            query_chunk_features = query_features[
+                idx : min((idx + samples_per_chunk), num_test_samples), :
+            ]
+            chunk_labels = labels[
+                idx : min((idx + samples_per_chunk), num_test_samples)
+            ]
+            
+            batch_size = chunk_labels.shape[0]
+            
+            _, _, _, _, probs, _, preds = knn_core(
+                prediction_features, 
+                query_chunk_features, 
+                labels, 
+                k, 
+                temperature, 
+                zero_diagonal, 
+                num_classes, 
+                batch_size)
+            
+            probabilities.append(probs)
+            predictions.append(preds)
         
-    for idx in range(0, num_test_samples, samples_per_chunk):
+        probabilities = torch.cat(probabilities, dim=0)
+        predictions = torch.cat(predictions, dim=0)
         
-        chunk_features = query_features[
-            idx : min((idx + samples_per_chunk), num_test_samples), :
-        ]
-        chunk_labels = labels[
-            idx : min((idx + samples_per_chunk), num_test_samples)
-        ]
+        return probabilities, predictions, labels
+    else:
+        batch_size = labels.shape[0]
         
-        batch_size = chunk_labels.shape[0]
-        
-        similarity = F.normalize(chunk_features) @ F.normalize(prediction_features).t() 
-        torch.diagonal(similarity, 0).zero_() if zero_diagonal else None
-        distances, indices = similarity.topk(k, largest=True, sorted=True)
-        candidates = labels.view(1, -1).expand(batch_size, -1)
-        retrieved_neighbors = torch.gather(candidates, 1, indices)
-        
-        retrieval_one_hot = torch.zeros(batch_size * k, num_classes)
-        retrieval_one_hot.scatter_(1, retrieved_neighbors.view(-1, 1), 1)
-        distances_transform = (distances / temperature).exp_()
-        
-        probs = torch.sum(
-            torch.mul(
-                retrieval_one_hot.view(batch_size, -1, num_classes),
-                distances_transform.view(batch_size, -1, 1),
-            ),
-            1,
-        )
-        probs.div_(probs.sum(dim=1, keepdim=True))
-        probs_sorted, preds = probs.sort(1, True)
-        
-        probabilities.append(probs)
-        predictions.append(preds)
+        return knn_core(
+            prediction_features, 
+            query_features, 
+            labels, 
+            k, 
+            temperature, 
+            zero_diagonal, 
+            num_classes, 
+            batch_size)
+
+
+def knn_core(prediction_features, query_features, labels, k, temperature, zero_diagonal, num_classes, batch_size):
     
-    probabilities = torch.cat(probabilities, dim=0)
-    predictions = torch.cat(predictions, dim=0)
+    # if k is larger than the number of prediction features, we just use all of them
+    if k > len(prediction_features):
+        k = len(prediction_features)
     
-    return probabilities, predictions, labels
+    similarity = F.normalize(query_features) @ F.normalize(prediction_features).t()
+    similarity_ground_truth = torch.diag(similarity)
+
+    torch.diagonal(similarity, 0).zero_() if zero_diagonal else None
+    distances, indices = similarity.topk(k, largest=True, sorted=True)
+    candidates = labels.view(1, -1).expand(batch_size, -1)
+    retrieved_neighbors = torch.gather(candidates, 1, indices)
+    
+    retrieval_one_hot = torch.zeros(batch_size * k, num_classes)
+    retrieval_one_hot.scatter_(1, retrieved_neighbors.view(-1, 1), 1)
+    distances_transform = (distances / temperature).exp_()
+    
+    probs = torch.sum(
+        torch.mul(
+            retrieval_one_hot.view(batch_size, -1, num_classes),
+            distances_transform.view(batch_size, -1, 1),
+        ),
+        1,
+    )
+    probs.div_(probs.sum(dim=1, keepdim=True))
+    probs_sorted, predictions = probs.sort(1, True)
+    
+    return similarity, similarity_ground_truth, distances, indices, probs, probs_sorted, predictions

@@ -9,8 +9,9 @@ defaults:
       - default.yaml
       - artifacts.yaml
       - metrics.yaml
+      - media.yaml
   - profiler: default.yaml
-  - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - logger: wandb.yaml 
   - trainer: default.yaml
   - log_dir: default.yaml
 

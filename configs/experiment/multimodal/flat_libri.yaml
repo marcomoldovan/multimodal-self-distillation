@@ -10,6 +10,7 @@ defaults:
       - default.yaml
       - metrics.yaml
       - artifacts.yaml
+      - media.yaml
   - override /logger: wandb.yaml
   - override /trainer: default.yaml
 
@@ -26,8 +27,9 @@ seed: 75491
 trainer:
   gpus: 1
   min_epochs: 1
-  max_epochs: 10
+  max_epochs: 1
   log_every_n_steps: 1
+  num_sanity_val_steps: 10
 
 model:
   switch_student_teacher_per_epoch: false
@@ -54,6 +56,11 @@ callbacks:
   log_metrics:
     top_k: [1, 10, 100]
     logging_interval: 1
+    on_step: False
+    on_epoch: True
   watch_model:
     log: "all"
     log_freq: 1
+  log_media:
+    log_every_n_steps: 9
+

@@ -45,7 +45,7 @@ class LibriSpeechDataModule(LightningDataModule):
         self.libri_test: Optional[Dataset] = None
         
         self.align_fuse = [['text'], ['audio']]
-        self.metric = 'Recall@k'
+        self.metric = ['Recall@k']
         
         logging.set_verbosity(logging.CRITICAL)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')

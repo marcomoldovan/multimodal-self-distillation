@@ -62,19 +62,18 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
               
-    # TODO fix this  
-    # # Init lightning profilers
-    # profiler: List[Profiler] = []
-    # if "profiler" in config:
-    #     for _, lg_conf in config.logger.items():
-    #         if "_target_" in lg_conf:
-    #             log.info(f"Instantiating profiler <{lg_conf._target_}>")
-    #             profiler.append(hydra.utils.instantiate(lg_conf))
+    # Init lightning profilers
+    profiler: List[Profiler] = []
+    if "profiler" in config:
+        for _, pf_conf in config.profiler.items():
+            if "_target_" in pf_conf:
+                log.info(f"Instantiating profiler <{pf_conf._target_}>")
+                profiler.append(hydra.utils.instantiate(pf_conf))
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(
-        config.trainer, callbacks=callbacks, logger=logger, _convert_="partial" # profiler=profiler
+        config.trainer, callbacks=callbacks, logger=logger, _convert_="partial", profiler=profiler
     )
 
     # Send some parameters from config to all lightning loggers

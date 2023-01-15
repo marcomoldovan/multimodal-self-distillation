@@ -1,10 +1,12 @@
 from typing import List, Dict, Tuple
 
+from src.models.components.outputs import DispatcherOutput
+
 def dispatch_inputs(
     batch: Dict,
     epoch: int,
-    switch_teacher_student: bool = False,
-    ) -> Tuple[dict, dict, bool, dict]:
+    switch_teacher_student: bool = False
+    ) -> DispatcherOutput:
     """
     Returns the input dicts for student and teacher model.
     
@@ -20,13 +22,13 @@ def dispatch_inputs(
             - [['image'], ['image']]
         epoch : (int)
             number of current epoch
+        switch_teacher_student : (bool)
+        validation : (bool)
+        test : (bool)
             
     Returns
     -------
-        student_inputs : (dict)
-        teacher_inputs : (dict)
-        apply_align : (bool)
-        labels : (dict)
+        dispatcher_output : DispatcherOutput
     """
         
     if 'align_fuse' in batch.keys():
@@ -44,6 +46,11 @@ def dispatch_inputs(
         metric = batch['metric']
     else:
         metric = None
+        
+    if 'num_classes' in batch.keys():
+        num_classes = batch['num_classes']
+    else:
+        num_classes = None
         
     if align_fuse[0] == align_fuse[1]:
         # unimodal case, e.g. [['text'], ['text']] or [['image'], ['image']]
@@ -80,4 +87,15 @@ def dispatch_inputs(
             
     output_modalities = {'student_output': student_inputs.keys(), 'teacher_output': teacher_inputs.keys()}
     
-    return student_inputs, teacher_inputs, align_fuse, apply_mask, labels, output_modalities, metric
+    dispater_output = DispatcherOutput(
+        student_input=student_inputs,
+        teacher_inputs=teacher_inputs,
+        align_fuse=align_fuse,
+        apply_mask=apply_mask,
+        labels=labels,
+        output_modalities=output_modalities,
+        metric=metric,
+        num_classes=num_classes,
+    )
+    
+    return dispater_output

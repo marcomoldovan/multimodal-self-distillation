@@ -2,6 +2,31 @@ import torch
 
 # output classes for bi-encoder and mm-encoder account for flexibility in case of additional byol or data2vec outputs
 
+class DispatcherOutput:
+    def __init__(
+        self,
+        student_input, 
+        teacher_inputs, 
+        align_fuse, 
+        apply_mask: bool, 
+        labels: torch.Tensor, 
+        output_modalities: dict, 
+        metric: str, 
+        num_classes: int,
+    ) -> None:
+        self.student_input = student_input
+        self.teacher_inputs = teacher_inputs
+        self.align_fuse = align_fuse
+        self.apply_mask = apply_mask
+        self.labels = labels
+        self.output_modalities = output_modalities
+        self.metric = metric
+        self.num_classes = num_classes
+        
+    def set_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 class ModelOutput:
     def __init__(
         self,
@@ -17,6 +42,10 @@ class ModelOutput:
         self.attentions = attentions
         self.cross_attentions = cross_attentions
         
+    def set_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        
 
 class ForwardPassOutput:
     def __init__(
@@ -26,7 +55,8 @@ class ForwardPassOutput:
         align_fuse: dict = None,
         labels: torch.Tensor = None,
         output_modalities: dict = None,
-        metric: str = None
+        metric: str = None,
+        num_classes: int = None,
     ) -> None:
         self.student_output = student_output
         self.teacher_output = teacher_output
@@ -34,6 +64,7 @@ class ForwardPassOutput:
         self.labels = labels
         self.output_modalities = output_modalities
         self.metric = metric
+        self.num_classes = num_classes,
         
     def set_attributes(self, **kwargs):
         for key, value in kwargs.items():

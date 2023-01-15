@@ -2,17 +2,17 @@ defaults:
   - default.yaml
 
 watch_model:
-  _target_: src.callbacks.artifacts_callbacks.WatchModel
+  _target_: src.callbacks.artifacts_callback.WatchModel
   log: "all"
   log_freq: 100
 
 upload_code_as_artifact:
-  _target_: src.callbacks.artifacts_callbacks.UploadCodeAsArtifact
+  _target_: src.callbacks.artifacts_callback.UploadCodeAsArtifact
   code_dir: ${original_work_dir}/src
   use_git: False
 
 upload_ckpts_as_artifact:
-  _target_: src.callbacks.artifacts_callbacks.UploadCheckpointsAsArtifact
+  _target_: src.callbacks.artifacts_callback.UploadCheckpointsAsArtifact
   ckpt_dir: "checkpoints/"
   upload_best_only: True
 

@@ -8,18 +8,17 @@ from pytorch_lightning.utilities import rank_zero_only
 
 from src.utils import get_wandb_logger
 
-#TODO double check this file and get it up and running
 class WatchModel(Callback):
     """Make wandb watch model at the beginning of the run."""
 
-    def __init__(self, log: str = "all", log_freq: int = 10):
+    def __init__(self, log: str = 'all', log_freq: int = 10):
         self.log = log
         self.log_freq = log_freq
 
     @rank_zero_only
     def on_train_start(self, trainer, pl_module):
         logger = get_wandb_logger(trainer=trainer)
-        logger.watch(model=trainer.model, log=self.log, log_freq=self.log_freq, log_graph=True)
+        logger.watch(model=trainer.model, log='all', log_freq=self.log_freq, log_graph=True)
 
 
 class UploadCodeAsArtifact(Callback):

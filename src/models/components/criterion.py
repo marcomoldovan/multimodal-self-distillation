@@ -30,8 +30,6 @@ class LatentPredictionLoss(nn.Module):
         # normalize targets
         x = torch.layer_norm(x.float(), x.shape[-1:])
     
-        
-        
         with torch.no_grad():
             # take the last k transformer layers from the teacher
             y = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:]
@@ -41,7 +39,7 @@ class LatentPredictionLoss(nn.Module):
             # normalize targets
             y = torch.layer_norm(y.float(), y.shape[-1:])
                 
-        hidden_states_loss = self.loss_fn(x, y)
+        hidden_states_loss = self.loss_fn(x, y) #TODO should x be the student pooler output? Here x is the output of the regression head: https://github.com/arxyzan/data2vec-pytorch/blob/main/data2vec/data2vec.py
         
         x_pooler = fwd_output.student_output.pooler_output
         y_pooler = fwd_output.teacher_output.pooler_output
