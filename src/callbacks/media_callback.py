@@ -97,11 +97,15 @@ class MediaCallback(Callback):
                 # multimodal cases
                 else:
                     if align_fuse == [['text'],['audio']]:
+                        text_query = text[i]
+                        audio_gt = audio[i]
+                        audio_pred = audio[top_k_ids[i][0]]
+                        audio_pred_caption = text[top_k_ids[i][0]]
                         table.add_data(
-                            text[i], 
-                            wandb.Audio(audio[i], sample_rate=16000, caption=text[i]), 
+                            text_query, 
+                            wandb.Audio(audio_gt, sample_rate=16000, caption=text_query), 
                             sim_gt, 
-                            wandb.Audio(audio[top_k_ids[i][0]], sample_rate=16000, caption=text[top_k_ids[i][0]]), 
+                            wandb.Audio(audio_pred, sample_rate=16000, caption=audio_pred_caption), 
                             top_k_dist[i][0]
                         )
                     elif align_fuse == [['text'],['image']]:

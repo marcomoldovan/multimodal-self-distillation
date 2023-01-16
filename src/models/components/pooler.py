@@ -10,6 +10,7 @@ class Pooler(torch.nn.Module):
         
         super().__init__()
         
+        #! TODO Batch NORMALIZATION???
         self.dense = torch.nn.Linear(hidden_size_in, hidden_size_out)
         self.activation = torch.nn.Tanh()
     
