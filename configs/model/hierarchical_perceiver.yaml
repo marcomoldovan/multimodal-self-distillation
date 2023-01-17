@@ -100,3 +100,4 @@ model:
   is_training: True
   mask_time_prob: 0.05
   mask_time_length: 10
+  use_simsiam_mlp: False

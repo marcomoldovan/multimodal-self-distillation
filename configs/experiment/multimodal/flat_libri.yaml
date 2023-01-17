@@ -40,6 +40,9 @@ model:
     num_latents: 384
     d_latents: 128
     num_self_attends_per_block: 6
+    cross_attention_widening_factor: 1
+    self_attention_widening_factor: 1
+    use_simsiam_projector: False
 
 datamodule:
   train_batch_size: 20

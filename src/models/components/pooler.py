@@ -1,18 +1,38 @@
 import torch
+from torch import nn
 
 
 class Pooler(torch.nn.Module):
     def __init__(
         self,
-        hidden_size_in: int,
-        hidden_size_out: int,
+        dim_in: int,
+        projection_size: int,
+        widening_factor: int = 4,
+        use_simsiam_mlp: bool = False
         ):
         
         super().__init__()
         
-        #! TODO Batch NORMALIZATION???
-        self.dense = torch.nn.Linear(hidden_size_in, hidden_size_out)
-        self.activation = torch.nn.Tanh()
+        hidden_size = dim_in * widening_factor
+        
+        if use_simsiam_mlp:
+            self.mlp = nn.Sequential(
+                nn.Linear(dim_in, hidden_size, bias=False),
+                nn.BatchNorm1d(hidden_size),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_size, hidden_size, bias=False),
+                nn.BatchNorm1d(hidden_size),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_size, projection_size, bias=False),
+                nn.BatchNorm1d(projection_size, affine=False)
+            )
+        else:
+            self.mlp = nn.Sequential(
+                nn.Linear(dim_in, hidden_size),
+                nn.BatchNorm1d(hidden_size),
+                nn.ReLU(inplace=True),
+                nn.Linear(hidden_size, projection_size)
+            )
     
     
     def forward(
@@ -24,7 +44,10 @@ class Pooler(torch.nn.Module):
         attention_mask = torch.ones(batch_size, sequence_length)
         
         output_vectors = []
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float().to(last_hidden_state.device)
+        
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(
+            last_hidden_state.size()).float().to(last_hidden_state.device
+        )
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
         
         sum_mask = input_mask_expanded.sum(1)
@@ -33,6 +56,5 @@ class Pooler(torch.nn.Module):
         output_vectors.append(sum_embeddings / sum_mask)
         output_vector = torch.cat(output_vectors, 0)
         
-        output_vector = self.activation(self.dense(output_vector))
+        return self.mlp(output_vector)
         
-        return output_vector

@@ -384,14 +384,16 @@ class HiPModel(nn.Module):
         is_training: bool = False,
         mask_time_prob: float = 0.05,
         mask_time_length: int = 10,
-        
+        use_simsiam_mlp: bool = False
     ):
         super().__init__()
         self.preprocessor = preprocessor
         self.hip = hip
+        
         self.pooler = Pooler(
-            hidden_size_in=self.hip.layers[-1].hidden_size, 
-            hidden_size_out=self.hip.layers[-1].hidden_size
+            dim_in=self.hip.layers[-1].hidden_size, 
+            projection_size=self.hip.layers[-1].hidden_size,
+            use_simsiam_mlp=use_simsiam_mlp
         )
         
         self.is_student = is_student
