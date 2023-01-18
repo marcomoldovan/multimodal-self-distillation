@@ -23,7 +23,6 @@ criterion:
   sim_loss_weight: 25.0
   var_loss_weight: 25.0
   cov_loss_weight: 1.0
-  use_vicreg_loss: False
 
 model:
   _target_: src.models.components.hip.HiPModel

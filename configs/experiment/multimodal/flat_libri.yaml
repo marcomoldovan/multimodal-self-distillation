@@ -43,8 +43,6 @@ model:
     cross_attention_widening_factor: 1
     self_attention_widening_factor: 1
     use_simsiam_projector: False
-  criterion:
-    use_vicreg_loss: False
 
 datamodule:
   train_batch_size: 20

@@ -10,7 +10,8 @@ class Pooler(torch.nn.Module):
         widening_factor: int = 4,
         use_simsiam_mlp: bool = False
         ):
-        
+        #TODO there's a difference in the regression head from faiss data2vec and a BERT style pooler
+        #NOTE BatchNorm1d is not used in the faiss regression head and does not work on 3D tensors
         super().__init__()
         
         hidden_size = dim_in * widening_factor

@@ -1,3 +1,4 @@
+import math
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -11,19 +12,33 @@ class LatentPredictionLoss(nn.Module):
         num_hidden_layers_to_predict: int,
         reduction: str = "mean",
         beta: float = 1.0,
+        latent_loss_scale: float = 1.0,
+        batch_norm_target_layer:bool = True,
+        instance_norm_target_layer: bool = True,
+        layer_norm_target_layer: bool = True,
+        layer_norm_targets: bool = True,
+        instance_norm_targets: bool = True,
         sim_loss_weight: float = 25.0,
         var_loss_weight: float = 25.0,
         cov_loss_weight: float = 1.0,
-        use_vicreg_loss: bool = False,
         ) -> None:
         super().__init__()
         
-        if use_vicreg_loss:
-            self.loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
-        else:
-            self.loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
+        self.has_faiss_format = False
+        self.batch_norm_target_layer = batch_norm_target_layer
+        self.instance_norm_target_layer = instance_norm_target_layer
+        self.layer_norm_target_layer = layer_norm_target_layer
+        self.layer_norm_targets = layer_norm_targets
+        self.instance_norm_targets = instance_norm_targets
         
-        self.num_hidden_layers_to_predict = num_hidden_layers_to_predict
+        self.reduction = reduction
+        self.beta = beta
+        self.latent_loss_scale = latent_loss_scale
+        
+        self.latent_loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
+        self.pooler_loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
+        
+        self.k = num_hidden_layers_to_predict
         
     
     def forward(
@@ -31,31 +46,68 @@ class LatentPredictionLoss(nn.Module):
         fwd_output: ForwardPassOutput,
         ) -> torch.Tensor:
         
-        #TODO is this the same as the mean pooling in the pooler?
-        # take the last transformer layers from the student
-        x = fwd_output.student_output.hidden_states[-1:][0] # batch size, sequence length, hidden size
-        # Follow the same layer normalization for all modalities
-        # x = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in x]
-        # x = sum(x) / len(x)
-        # normalize targets
-        # x = torch.layer_norm(x.float(), x.shape[-1:]) # sequence length, hidden size
+        # take the last transformer layers from the student: (batch size, sequence length, hidden size)
+        x = fwd_output.student_output.hidden_states[-1:][0] 
+        #TODO optionally: x = regression_head(x)
     
         with torch.no_grad():
-            # take the last k transformer layers from the teacher
-            y = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:] # k * [batch size, sequence length, hidden size]
-            # Follow the same layer normalization for all modalities
-            # y = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in y]
+            
+            # (batch_size, sequence_length, hidden_size) * attention_layers
+            y = y[-self.k:]
+
+            # B: batch size, T: sequence length, C: hidden size
+
+            if not self.has_faiss_format:
+                y = [tl.permute(1, 0, 2) for tl in y] # BTC -> TBC
+
+            permuted = False
+            if  self.batch_norm_target_layer or self.instance_norm_target_layer:
+                y = [tl.permute(1, 2, 0) for tl in y]  # TBC -> BCT
+                permuted = True
+
+            if self.batch_norm_target_layer:
+                y = [
+                    F.batch_norm(
+                        tl.float(), running_mean=None, running_var=None, training=True
+                    )
+                    for tl in y
+                ]
+
+            if self.instance_norm_target_layer:
+                y = [F.instance_norm(tl.float()) for tl in y]
+
+            if permuted:
+                y = [tl.transpose(1, 2) for tl in y]  # BCT -> BTC
+
+            if self.layer_norm_target_layer:
+                y = [F.layer_norm(tl.float(), tl.shape[-1:]) for tl in y]
+
             y = sum(y) / len(y)
-            # normalize targets
-            # y = torch.layer_norm(y.float(), y.shape[-1:]) # batch, sequence length, hidden size
+
+            if not permuted:
+                y = y.transpose(0, 1)
+
+            if self.layer_norm_targets:
+                y = F.layer_norm(y.float(), y.shape[-1:])
+
+            if self.instance_norm_targets:
+                y = F.instance_norm(y.transpose(1, 2)).transpose(1, 2)
                 
-        hidden_states_loss = self.loss_fn(x, y) #TODO should x be the student pooler output? Here x is the output of the regression head: https://github.com/arxyzan/data2vec-pytorch/blob/main/data2vec/data2vec.py
+        sz = x.size(-1)
+
+        latent_loss = F.smooth_l1_loss(
+                        x.float(), y.float(), reduction="none", beta=self.beta
+                    ).sum(dim=-1)
         
+        #TODO latent_loss.mean() better?
+        latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
+        
+        # pooler loss (batch size, hidden size)                
         x_pooler = fwd_output.student_output.pooler_output
         y_pooler = fwd_output.teacher_output.pooler_output
-        pooler_loss = self.loss_fn(x_pooler, y_pooler)
+        pooler_loss = self.pooler_loss_fn(x_pooler, y_pooler)
         
-        loss = hidden_states_loss + pooler_loss
+        loss = latent_loss + pooler_loss
         
         return loss
                 
