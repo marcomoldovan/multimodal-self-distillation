@@ -56,5 +56,5 @@ class Pooler(torch.nn.Module):
         output_vectors.append(sum_embeddings / sum_mask)
         output_vector = torch.cat(output_vectors, 0)
         
-        return self.mlp(output_vector)
+        return self.mlp(output_vector) # batch size, projection size
         

@@ -22,7 +22,7 @@ name: "flat_perceiver_librispeech"
 
 data_dir: E:/Datasets
 
-seed: 75491
+seed: 53682
 
 trainer:
   gpus: 1
@@ -43,6 +43,8 @@ model:
     cross_attention_widening_factor: 1
     self_attention_widening_factor: 1
     use_simsiam_projector: False
+  criterion:
+    use_vicreg_loss: False
 
 datamodule:
   train_batch_size: 20
@@ -57,7 +59,7 @@ logger:
 
 callbacks:
   log_metrics:
-    top_k: [1, 10, 100]
+    top_k: [1, 5, 100]
     logging_interval: 1
     on_step: False
     on_epoch: True

@@ -565,7 +565,7 @@ class PerceiverModel(nn.Module):
         self.pooler = Pooler(
             dim_in=d_latents, 
             projection_size=d_latents, 
-            hidden_size=d_latents*self_attention_widening_factor, 
+            widening_factor=self_attention_widening_factor, 
             use_simsiam_mlp=use_simsiam_projector
         )
     

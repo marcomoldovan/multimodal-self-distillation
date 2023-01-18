@@ -20,6 +20,10 @@ criterion:
   num_hidden_layers_to_predict: 3
   reduction: 'mean'
   beta: 1.0
+  sim_loss_weight: 25.0
+  var_loss_weight: 25.0
+  cov_loss_weight: 1.0
+  use_vicreg_loss: False
 
 model:
   _target_: src.models.components.hip.HiPModel

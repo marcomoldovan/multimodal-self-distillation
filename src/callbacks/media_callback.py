@@ -74,7 +74,7 @@ class MediaCallback(Callback):
                 prediction_features=features, 
                 query_features=queries, 
                 labels=labels, 
-                k=3, 
+                k=20, 
                 chunking=False)
                         
             for i, sim_gt in enumerate(similarity_gt):

@@ -10,11 +10,18 @@ class LatentPredictionLoss(nn.Module):
         self,
         num_hidden_layers_to_predict: int,
         reduction: str = "mean",
-        beta: float = 1.0        
+        beta: float = 1.0,
+        sim_loss_weight: float = 25.0,
+        var_loss_weight: float = 25.0,
+        cov_loss_weight: float = 1.0,
+        use_vicreg_loss: bool = False,
         ) -> None:
         super().__init__()
         
-        self.loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
+        if use_vicreg_loss:
+            self.loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
+        else:
+            self.loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
         
         self.num_hidden_layers_to_predict = num_hidden_layers_to_predict
         
@@ -26,21 +33,21 @@ class LatentPredictionLoss(nn.Module):
         
         #TODO is this the same as the mean pooling in the pooler?
         # take the last transformer layers from the student
-        x = fwd_output.student_output.hidden_states[-1:][0] 
+        x = fwd_output.student_output.hidden_states[-1:][0] # batch size, sequence length, hidden size
         # Follow the same layer normalization for all modalities
-        x = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in x]
-        x = sum(x) / len(x)
+        # x = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in x]
+        # x = sum(x) / len(x)
         # normalize targets
-        x = torch.layer_norm(x.float(), x.shape[-1:])
+        # x = torch.layer_norm(x.float(), x.shape[-1:]) # sequence length, hidden size
     
         with torch.no_grad():
             # take the last k transformer layers from the teacher
-            y = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:]
+            y = fwd_output.teacher_output.hidden_states[-self.num_hidden_layers_to_predict:] # k * [batch size, sequence length, hidden size]
             # Follow the same layer normalization for all modalities
-            y = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in y]
+            # y = [torch.layer_norm(tl.float(), tl.shape[-1:]) for tl in y]
             y = sum(y) / len(y)
             # normalize targets
-            y = torch.layer_norm(y.float(), y.shape[-1:])
+            # y = torch.layer_norm(y.float(), y.shape[-1:]) # batch, sequence length, hidden size
                 
         hidden_states_loss = self.loss_fn(x, y) #TODO should x be the student pooler output? Here x is the output of the regression head: https://github.com/arxyzan/data2vec-pytorch/blob/main/data2vec/data2vec.py
         
@@ -56,8 +63,24 @@ class LatentPredictionLoss(nn.Module):
 
 class VICRegLoss(nn.Module):
     # https://github.com/vturrisi/solo-learn/blob/main/solo/losses/vicreg.py
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        sim_loss_weight: float = 25.0,
+        var_loss_weight: float = 25.0,
+        cov_loss_weight: float = 1.0,
+        ) -> None:
+        """_summary_
+
+        Args:
+            sim_loss_weight (float, optional): _description_. Defaults to 25.0.
+            var_loss_weight (float, optional): _description_. Defaults to 25.0.
+            cov_loss_weight (float, optional): _description_. Defaults to 1.0.
+        """
         super().__init__()
+        
+        self.sim_loss_weight = sim_loss_weight
+        self.var_loss_weight = var_loss_weight
+        self.cov_loss_weight = cov_loss_weight
 
     
     def invariance_loss(self, z1: torch.Tensor, z2: torch.Tensor) -> torch.Tensor:
@@ -115,19 +138,13 @@ class VICRegLoss(nn.Module):
     def forward(
         self,
         z1: torch.Tensor,
-        z2: torch.Tensor,
-        sim_loss_weight: float = 25.0,
-        var_loss_weight: float = 25.0,
-        cov_loss_weight: float = 1.0,
+        z2: torch.Tensor
     ) -> torch.Tensor:
         """Computes VICReg's loss given batch of projected features z1 from view 1 and
         projected features z2 from view 2.
         Args:
             z1 (torch.Tensor): NxD Tensor containing projected features from view 1.
             z2 (torch.Tensor): NxD Tensor containing projected features from view 2.
-            sim_loss_weight (float): invariance loss weight.
-            var_loss_weight (float): variance loss weight.
-            cov_loss_weight (float): covariance loss weight.
         Returns:
             torch.Tensor: VICReg loss.
         """
@@ -141,5 +158,6 @@ class VICRegLoss(nn.Module):
         var_loss = self.variance_loss(z1, z2)
         cov_loss = self.covariance_loss(z1, z2)
 
-        loss = sim_loss_weight * sim_loss + var_loss_weight * var_loss + cov_loss_weight * cov_loss
+        loss = self.sim_loss_weight * sim_loss + self.var_loss_weight * var_loss + self.cov_loss_weight * cov_loss
+        
         return loss
