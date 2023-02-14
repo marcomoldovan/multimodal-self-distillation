@@ -1,8 +1,7 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import torch
 import wandb
-import PIL
 
 from pytorch_lightning import Callback, Trainer, LightningModule
 from pytorch_lightning.loggers import WandbLogger
@@ -69,13 +68,13 @@ class MediaCallback(Callback):
             
             table = wandb.Table(columns=['query', 'ground truth', 'similarity ground truth', '#1 prediction', 'similarity #1 prediction'])
             
-            #TODO we're searching only one batch so make k = batch_size
             _, similarity_gt, top_k_dist, top_k_ids, probs, _, _ = k_nearest_neighbor(
                 prediction_features=features, 
                 query_features=queries, 
                 labels=labels, 
-                k=20, 
-                chunking=False)
+                k=len(labels), 
+                chunking=False
+            )
                         
             for i, sim_gt in enumerate(similarity_gt):
                 

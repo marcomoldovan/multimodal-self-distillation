@@ -104,6 +104,7 @@ def train(config: DictConfig) -> Optional[float]:
             "Make sure the `optimized_metric` in `hparams_search` config is correct!"
         )
     score = trainer.callback_metrics.get(optimized_metric)
+    log.info(f"Metric {optimized_metric} for hyperparameter optimization: {score}")
 
     # Test the model
     if config.get("test"):

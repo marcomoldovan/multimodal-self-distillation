@@ -22,32 +22,40 @@ name: "flat_perceiver_librispeech"
 
 data_dir: E:/Datasets
 
-seed: 53682
+seed: 13579
+
+test: False
 
 trainer:
   gpus: 1
+  accumulate_grad_batches: 8
   min_epochs: 1
-  max_epochs: 1
+  max_epochs: 100
+  limit_val_batches: 0 # disable validation
   log_every_n_steps: 1
   num_sanity_val_steps: 10
 
 model:
-  switch_student_teacher_per_epoch: false
+  switch_student_teacher_per_epoch: True
   optimizer:
     lr: 0.01
   model:
     d_model: 504
     num_latents: 384
-    d_latents: 128
-    num_self_attends_per_block: 6
-    cross_attention_widening_factor: 1
-    self_attention_widening_factor: 1
+    d_latents: 256
+    num_self_attends_per_block: 8
+    cross_attention_widening_factor: 2
+    self_attention_widening_factor: 2
     use_simsiam_projector: False
+  criterion:
+    aggregation: "mean"
+    latent_loss_scale: 1
 
 datamodule:
-  train_batch_size: 20
-  val_batch_size: 20
-  test_batch_size: 20
+  split: validation
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 16
 
 logger:
   wandb:
@@ -65,5 +73,5 @@ callbacks:
     log: "all"
     log_freq: 1
   log_media:
-    log_every_n_steps: 9
+    log_every_n_steps: 10
 

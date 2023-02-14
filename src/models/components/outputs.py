@@ -27,6 +27,7 @@ class DispatcherOutput:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+
 class ModelOutput:
     def __init__(
         self,
@@ -46,6 +47,22 @@ class ModelOutput:
         for key, value in kwargs.items():
             setattr(self, key, value)
         
+        
+class CriterionOutput:
+    def __init__(
+        self,
+        total_loss: torch.Tensor,
+        latent_loss: torch.Tensor = None,
+        align_loss: torch.Tensor = None,
+    ) -> None:
+        self.total_loss = total_loss
+        self.latent_loss = latent_loss
+        self.align_loss = align_loss
+        
+    def set_attributes(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 
 class ForwardPassOutput:
     def __init__(
@@ -57,6 +74,7 @@ class ForwardPassOutput:
         output_modalities: dict = None,
         metric: str = None,
         num_classes: int = None,
+        criterion_output: CriterionOutput = None,
     ) -> None:
         self.student_output = student_output
         self.teacher_output = teacher_output
@@ -65,7 +83,9 @@ class ForwardPassOutput:
         self.output_modalities = output_modalities
         self.metric = metric
         self.num_classes = num_classes,
+        self.criterion_output = criterion_output
         
     def set_attributes(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+            

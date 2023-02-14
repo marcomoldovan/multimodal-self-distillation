@@ -7,6 +7,10 @@ from pytorch_lightning import LightningDataModule
 from transformers import Wav2Vec2FeatureExtractor, PerceiverTokenizer
 from transformers.utils import logging
 
+from src import utils
+
+log = utils.get_logger(__name__)
+
 
 class LibriSpeechDataModule(LightningDataModule):
     """
@@ -45,7 +49,7 @@ class LibriSpeechDataModule(LightningDataModule):
         self.libri_test: Optional[Dataset] = None
         
         self.align_fuse = [['text'], ['audio']]
-        self.metric = ['Recall@k']
+        self.metric = ['Recall@k', 'MRR']
         
         logging.set_verbosity(logging.CRITICAL)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained('facebook/wav2vec2-base')
@@ -57,7 +61,7 @@ class LibriSpeechDataModule(LightningDataModule):
         """Download data if needed. This method is called only from a single GPU.
         Do not use it to assign state (self.x = y)."""
         if os.path.isdir(self.hparams.data_dir):
-            print("Data directory already exists, skipping download.") #TODO replace with logging
+            log.info("Data directory already exists, skipping download.") 
         else:
             load_dataset('librispeech_asr', 'clean', split=self.hparams.split, cache_dir=self.hparams.data_dir)
             
@@ -78,8 +82,7 @@ class LibriSpeechDataModule(LightningDataModule):
             self.libri_test = load_dataset('librispeech_asr', 'clean', split='test', cache_dir=self.hparams.data_dir)
         
         if stage == "predict" or stage is None:
-            raise Exception("""This DataModule is not designed to be used for prediction.
-                            Please use the Spotify DataModule for prediction.""")
+            raise Exception("This DataModule is not designed to be used for prediction.")
     
     
     def train_dataloader(self):
@@ -89,7 +92,8 @@ class LibriSpeechDataModule(LightningDataModule):
             shuffle=True, 
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
-            pin_memory=self.hparams.pin_memory
+            pin_memory=self.hparams.pin_memory,
+            drop_last=True
         )
         
         
@@ -100,7 +104,8 @@ class LibriSpeechDataModule(LightningDataModule):
             shuffle=False, 
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
-            pin_memory=self.hparams.pin_memory
+            pin_memory=self.hparams.pin_memory,
+            drop_last=True
         )
         
         
@@ -111,7 +116,8 @@ class LibriSpeechDataModule(LightningDataModule):
             shuffle=False, 
             collate_fn=self.collate_fn, 
             num_workers=self.num_workers,
-            pin_memory=self.hparams.pin_memory
+            pin_memory=self.hparams.pin_memory,
+            drop_last=True
         )
         
         

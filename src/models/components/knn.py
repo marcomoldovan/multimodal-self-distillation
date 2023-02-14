@@ -16,7 +16,7 @@ def k_nearest_neighbor(
     predictions = []
         
     temperature = 0.1
-    num_classes = len(set(list(labels.numpy()))) #TODO this is a hacky and probably wrong if we compute accuracy after this
+    num_classes = len(set(list(labels.numpy())))
     
     if query_features is None:
         # means that similarity is computed between prediction features and itself

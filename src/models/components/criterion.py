@@ -4,13 +4,14 @@ from torch import nn
 import torch.nn.functional as F
 
 from src.models.components.gather import gather
-from src.models.components.outputs import ForwardPassOutput
+from src.models.components.outputs import ForwardPassOutput, CriterionOutput
 
 class LatentPredictionLoss(nn.Module):
     def __init__(
         self,
         num_hidden_layers_to_predict: int,
-        reduction: str = "mean",
+        reduction: str = "none",
+        aggregation: str = "mean",
         beta: float = 1.0,
         latent_loss_scale: float = 1.0,
         batch_norm_target_layer:bool = True,
@@ -32,11 +33,11 @@ class LatentPredictionLoss(nn.Module):
         self.instance_norm_targets = instance_norm_targets
         
         self.reduction = reduction
+        self.aggregation = aggregation
         self.beta = beta
         self.latent_loss_scale = latent_loss_scale
         
-        self.latent_loss_fn = nn.SmoothL1Loss(reduction=reduction, beta=beta)
-        self.pooler_loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
+        self.align_loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
         
         self.k = num_hidden_layers_to_predict
         
@@ -44,7 +45,7 @@ class LatentPredictionLoss(nn.Module):
     def forward(
         self,
         fwd_output: ForwardPassOutput,
-        ) -> torch.Tensor:
+        ) -> CriterionOutput:
         
         # take the last transformer layers from the student: (batch size, sequence length, hidden size)
         x = fwd_output.student_output.hidden_states[-1:][0] 
@@ -53,7 +54,7 @@ class LatentPredictionLoss(nn.Module):
         with torch.no_grad():
             
             # (batch_size, sequence_length, hidden_size) * attention_layers
-            y = y[-self.k:]
+            y = fwd_output.teacher_output.hidden_states[-self.k:]
 
             # B: batch size, T: sequence length, C: hidden size
 
@@ -96,20 +97,24 @@ class LatentPredictionLoss(nn.Module):
         sz = x.size(-1)
 
         latent_loss = F.smooth_l1_loss(
-                        x.float(), y.float(), reduction="none", beta=self.beta
+                        x.float(), y.float(), reduction=self.reduction, beta=self.beta
                     ).sum(dim=-1)
         
-        #TODO latent_loss.mean() better?
-        latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
+        if self.aggregation == 'mean':
+            latent_loss = latent_loss.mean() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.mean() * self.latent_loss_scale
+        elif self.aggregation == 'sum':
+            latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
         
         # pooler loss (batch size, hidden size)                
         x_pooler = fwd_output.student_output.pooler_output
         y_pooler = fwd_output.teacher_output.pooler_output
-        pooler_loss = self.pooler_loss_fn(x_pooler, y_pooler)
+        align_loss = self.align_loss_fn(x_pooler, y_pooler)
         
-        loss = latent_loss + pooler_loss
+        total_loss = latent_loss + align_loss
         
-        return loss
+        criterion_output = CriterionOutput(total_loss=total_loss, latent_loss=latent_loss, align_loss=align_loss)
+        
+        return criterion_output
                 
                 
 
@@ -213,3 +218,4 @@ class VICRegLoss(nn.Module):
         loss = self.sim_loss_weight * sim_loss + self.var_loss_weight * var_loss + self.cov_loss_weight * cov_loss
         
         return loss
+    

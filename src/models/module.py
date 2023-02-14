@@ -40,7 +40,7 @@ class LatentPredictionPretraining(pl.LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # it also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=True, ignore=['criterion']) 
+        self.save_hyperparameters(logger=True) #, ignore=['criterion']) 
         
         # student and teacher models is instantiated by Hydra
         self.student = model
@@ -101,11 +101,13 @@ class LatentPredictionPretraining(pl.LightningModule):
             batch,
             self.current_epoch,
             self.switch_student_teacher_per_epoch,
-        )        
+        )  
+              
         student_outputs: ModelOutput = self.student(
             dispatched_inputs.student_input, 
             apply_mask=dispatched_inputs.apply_mask
         )
+        
         outputs = ForwardPassOutput(
             student_output=student_outputs, 
             align_fuse=dispatched_inputs.align_fuse,
@@ -120,13 +122,14 @@ class LatentPredictionPretraining(pl.LightningModule):
     def step(
         self, 
         batch: Any, 
-    ) -> Tuple[ForwardPassOutput, torch.Tensor]:
+    ) -> ForwardPassOutput:
         
         # forward pass student
         outputs, dispatched_inputs = self.forward(batch)
         
         # forward pass teacher
-        with torch.no_grad():            
+        with torch.no_grad():  
+            self.teacher.model.eval()          
             teacher_outputs: ModelOutput = self.teacher.model(
                 dispatched_inputs.teacher_inputs, 
                 apply_mask=dispatched_inputs.apply_mask
@@ -134,9 +137,11 @@ class LatentPredictionPretraining(pl.LightningModule):
             outputs.set_attributes(**{"teacher_output": teacher_outputs})
         
         # compute loss
-        loss = self.criterion(outputs)
+        criterion_output = self.criterion(outputs)
         
-        return outputs, loss
+        outputs.set_attributes(**{"criterion_output": criterion_output})
+        
+        return outputs
     
     
     def on_train_batch_end(self, outputs: Any, batch: Any, batch_idx: int) -> None:
@@ -149,27 +154,33 @@ class LatentPredictionPretraining(pl.LightningModule):
     # remember to always return loss from `training_step()` or else backpropagation will fail!
     
     def training_step(self, batch: Any, batch_idx: int):
-        outputs, loss = self.step(batch)
+        outputs : ForwardPassOutput = self.step(batch)
         
-        self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("train/total_loss", outputs.criterion_output.total_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("train/latent_loss", outputs.criterion_output.latent_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("train/align_loss", outputs.criterion_output.align_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "forward_pass_output": outputs}
+        return {"loss": outputs.criterion_output.total_loss, "forward_pass_output": outputs}
     
 
     def validation_step(self, batch: Any, batch_idx: int):
-        outputs, loss = self.step(batch)
+        outputs : ForwardPassOutput = self.step(batch)
         
-        self.log("val/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("val/total_loss", outputs.criterion_output.total_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("val/latent_loss", outputs.criterion_output.latent_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("val/align_loss", outputs.criterion_output.align_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "forward_pass_output": outputs}
+        return {"loss": outputs.criterion_output.total_loss, "forward_pass_output": outputs}
         
 
     def test_step(self, batch: Any, batch_idx: int):
-        outputs, loss = self.step(batch)
+        outputs : ForwardPassOutput = self.step(batch)
         
-        self.log("test/loss", loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("test/total_loss", outputs.criterion_output.total_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("test/latent_loss", outputs.criterion_output.latent_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
+        self.log("test/align_loss", outputs.criterion_output.align_loss, on_step=True, on_epoch=False, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "forward_pass_output": outputs}
+        return {"loss": outputs.criterion_output.total_loss, "forward_pass_output": outputs}
 
 
     def configure_optimizers(self):
@@ -190,7 +201,7 @@ class LatentPredictionPretraining(pl.LightningModule):
                 "frequency": 1,
             },
         }
-        
+          
         
         
 class LatentPredictionFinetuning(pl.LightningModule):

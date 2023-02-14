@@ -67,6 +67,40 @@ class MetricsCallback(Callback):
         self.metric = None
         self.align_fuse = None
         self.output_modalities = None
+        
+        
+    @rank_zero_only
+    def on_train_batch_end(
+        self,
+        trainer: pl.Trainer, 
+        pl_module: pl.LightningModule, 
+        outputs: Optional[Dict], 
+        batch: Any, 
+        batch_idx: int
+        ) -> None:
+        
+        fwd_outputs: ForwardPassOutput = outputs['forward_pass_output']
+        
+        self.output_modalities = fwd_outputs.output_modalities
+        self.align_fuse = fwd_outputs.align_fuse
+        self.metric = fwd_outputs.metric
+        
+        features = fwd_outputs.student_output.pooler_output.detach().cpu()
+        queries = fwd_outputs.teacher_output.pooler_output.detach().cpu()
+        labels = fwd_outputs.labels.detach().cpu() if utils.exists(fwd_outputs.labels) else torch.tensor(list(range(len(features))))
+        
+        self.compute_metrics(
+            predictions=features, 
+            queries=queries, 
+            labels=labels, 
+            pl_module=pl_module, 
+            mrr_metric=self.val_mrr, 
+            accuracy_metric=self.val_accuracy, 
+            recall_metric=self.val_recall, 
+            on_step=True, 
+            on_epoch=False,
+            train_or_val_or_test='train'
+        )
     
     
     @rank_zero_only
@@ -92,6 +126,7 @@ class MetricsCallback(Callback):
         self.align_fuse = fwd_outputs.align_fuse
         self.metric = fwd_outputs.metric
         
+        # initialize torchmetrics Accuracy@k objects
         if self.val_accuracy is None and fwd_outputs.num_classes is not None and Metric.ACCURACY.value in self.metric:
             self.val_accuracy = {k: Accuracy(top_k=k, num_classes=fwd_outputs.num_classes) for k in self.top_k}
         
@@ -108,16 +143,16 @@ class MetricsCallback(Callback):
                 # we treat retrieval as classification with a unique class per sample
                 labels = torch.tensor(list(range(len(features))))    
             self.compute_metrics(
-            predictions=features, 
-            queries=queries, 
-            labels=labels, 
-            mrr_metric=self.val_mrr, 
-            accuracy_metric=self.val_accuracy, 
-            recall_metric=self.val_recall, 
-            pl_module=pl_module, 
-            on_step=True, 
-            on_epoch=False,
-            val_or_test='val'
+                predictions=features, 
+                queries=queries, 
+                labels=labels, 
+                pl_module=pl_module, 
+                mrr_metric=self.val_mrr, 
+                accuracy_metric=self.val_accuracy, 
+                recall_metric=self.val_recall, 
+                on_step=True, 
+                on_epoch=False,
+                train_or_val_or_test='val'
             )
             
         if self.on_epoch:
@@ -147,14 +182,14 @@ class MetricsCallback(Callback):
                 predictions=features, 
                 queries=queries, 
                 labels=labels, 
+                pl_module=pl_module, 
                 mrr_metric=self.val_mrr, 
                 accuracy_metric=self.val_accuracy, 
                 recall_metric=self.val_recall, 
-                pl_module=pl_module, 
                 on_step=False, 
                 on_epoch=True,
-                val_or_test='val'
-                )
+                train_or_val_or_test='val'
+            )
         
         self.val_student_preds = []
         self.val_teacher_preds = []
@@ -197,14 +232,14 @@ class MetricsCallback(Callback):
                 predictions=features, 
                 queries=queries, 
                 labels=labels, 
+                pl_module=pl_module, 
                 mrr_metric=self.test_mrr, 
                 accuracy_metric=self.test_accuracy, 
                 recall_metric=self.test_recall, 
-                pl_module=pl_module, 
                 on_step=True, 
                 on_epoch=False,
-                val_or_test='test'
-                )
+                train_or_val_or_test='test'
+            )
         elif self.on_epoch:
             self.test_student_preds.append(features)
             self.test_teacher_preds.append(queries)
@@ -233,14 +268,14 @@ class MetricsCallback(Callback):
                 predictions=features, 
                 queries=queries, 
                 labels=labels, 
+                pl_module=pl_module, 
                 mrr_metric=self.test_mrr, 
                 accuracy_metric=self.test_accuracy, 
                 recall_metric=self.test_recall, 
-                pl_module=pl_module, 
                 on_step=False, 
                 on_epoch=True,
-                val_or_test='test'
-                )
+                train_or_val_or_test='test'
+            )
         
         self.val_student_preds = []
         self.val_teacher_preds = []
@@ -252,55 +287,63 @@ class MetricsCallback(Callback):
         predictions, 
         queries, 
         labels, 
+        pl_module: LightningModule, 
         mrr_metric: RetrievalMRR, 
         accuracy_metric: dict, 
         recall_metric: dict, 
-        pl_module: LightningModule, 
         on_step: bool = False, 
         on_epoch: bool = True,
-        val_or_test: str = 'val'
+        train_or_val_or_test: str = 'val'
         ) -> None:
         
         when_to_log = '_on_step' if on_step else '_on_epoch'
-        k = max(self.top_k)
+        
+        if on_step:
+            k = len(labels)
+        elif on_epoch:
+            k = max(self.top_k)
+        
+        probabilities, _, labels = k_nearest_neighbor(
+            prediction_features=predictions, 
+            query_features=queries, 
+            labels=labels, 
+            k=k
+        )
         
         if Metric.MRR.value in self.metric:
-            probabilities, _, labels = k_nearest_neighbor(prediction_features=predictions, query_features=queries, labels=labels, k=k)
             preds = torch.flatten(probabilities)
             target = torch.eye(len(labels)).flatten()
             indexes = torch.tensor([[n]*len(labels) for n in range(len(labels))], dtype=torch.long).flatten()
             pl_module.log(
-                f'{val_or_test}_mrr@{len(labels)}{when_to_log}', 
-                mrr_metric.compute(preds, target, indexes=indexes), 
+                f'{train_or_val_or_test}/mrr@{len(labels)}{when_to_log}', 
+                mrr_metric(preds, target, indexes=indexes), 
                 prog_bar=True, 
                 on_step=on_step, 
                 on_epoch=on_epoch, 
                 sync_dist=True
-                )
+            )
         if Metric.ACCURACY.value in self.metric:
-            probabilities, _, labels = k_nearest_neighbor(prediction_features=predictions, labels=labels, k=k)
             for key, value in accuracy_metric.items():
                 if key < len(labels):
                     pl_module.log(
-                        f'{val_or_test}_accuracy@{key}{when_to_log}',
+                        f'{train_or_val_or_test}/accuracy@{key}{when_to_log}',
                         value(probabilities, labels),
                         prog_bar=True, 
                         on_step=on_step, 
                         on_epoch=on_epoch, 
                         sync_dist=True
-                        )
+                    )
         if Metric.RECALL.value in self.metric:
-            probabilities, _, labels = k_nearest_neighbor(prediction_features=predictions, query_features=queries, labels=labels, k=k)
             for key, value in recall_metric.items():
                 if key < len(labels):
                     pl_module.log(
-                        f'{val_or_test}_recall@{key}{when_to_log}',
+                        f'{train_or_val_or_test}/recall@{key}{when_to_log}',
                         value(probabilities, labels),
                         prog_bar=True, 
                         on_step=on_step, 
                         on_epoch=on_epoch, 
                         sync_dist=True
-                        )
+                    )
         else:
             raise Exception('No metric specified or metric not supported')
         
