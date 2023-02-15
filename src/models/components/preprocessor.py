@@ -97,16 +97,21 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
         self.embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
         self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
         
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!
         #TODO the following line will probably break multi-GPU training, can we fix it?
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.embeddings.to(device)
-        self.position_embeddings.to(device)
+        # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        # self.embeddings.to(device)
+        # self.position_embeddings.to(device)
 
     @property
     def num_channels(self) -> int:
         return self.d_model
 
-    def forward(self, inputs: torch.LongTensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True) -> torch.FloatTensor:        
+    def forward(self, inputs: torch.LongTensor, pos: Optional[torch.Tensor] = None, network_input_is_1d: bool = True) -> torch.FloatTensor:  
+        device = inputs.device
+        self.embeddings.to(device)
+        self.position_embeddings.to(device)
+              
         embeddings = self.embeddings(inputs)
 
         seq_length = inputs.shape[1]
@@ -528,7 +533,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
     @property
     def num_channels(self) -> int:
-        max_channel_size = max(processor.num_channels for _, processor in self.modalities.items())
+        max_channel_size = max(processor.num_channels for _, processor in self.modalities.items()) #TODO this break HiP inputs because it takes the max channel size of all modality-specific preprocessors (even if the modility is not present in the input)
         common_channel_size = max_channel_size + self.min_padding_size
         return common_channel_size
 

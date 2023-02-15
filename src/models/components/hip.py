@@ -289,7 +289,7 @@ class PerceiverBlock(nn.Module):
         self.num_groups = num_groups
         self.hidden_size = hidden_size
 
-        self.latents = nn.Parameter(torch.randn(num_groups, num_latents, hidden_size))
+        self.latents = nn.Parameter(torch.randn(num_groups, num_latents, hidden_size)) #? is this producing the latent arrary?
         self.cross_attention = CrossAttention(
             kv_dim=input_dim,
             q_dim=hidden_size,

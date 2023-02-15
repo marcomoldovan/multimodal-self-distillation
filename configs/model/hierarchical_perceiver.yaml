@@ -31,7 +31,7 @@ model:
     modalities:
       text:
         _target_: src.models.components.preprocessor.PerceiverTextPreprocessor
-        d_model: 128 # ${model.d_latents} #! #TODO find solution for this
+        d_model: 32 # ${model.input_dim} #! #TODO find solution for this #TODO this (probably) denotes the initial (large) channel size of the input, important for the cross-attention with the latent array
         vocab_size: 262
         max_position_embeddings: 2048
       audio:
