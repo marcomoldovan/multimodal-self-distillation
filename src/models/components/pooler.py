@@ -16,6 +16,7 @@ class Pooler(torch.nn.Module):
         
         hidden_size = dim_in * widening_factor
         
+        #TODO add option of not using a projection head and just returning the mean-pooled vector
         if use_simsiam_mlp:
             self.mlp = nn.Sequential(
                 nn.Linear(dim_in, hidden_size, bias=False),

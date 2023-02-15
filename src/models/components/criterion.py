@@ -105,6 +105,7 @@ class LatentPredictionLoss(nn.Module):
         elif self.aggregation == 'sum':
             latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
         
+        #TODO add option of not using pooler loss at all to see if it's dominating convergence
         # pooler loss (batch size, hidden size)                
         x_pooler = fwd_output.student_output.pooler_output
         y_pooler = fwd_output.teacher_output.pooler_output
