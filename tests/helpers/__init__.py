@@ -31,7 +31,7 @@ def get_input_features(samples_per_patch):
     try:
         article = wikipedia.page("Communism")
         text = article.content
-        tokens = tokenizer(text, truncation=True, max_length=32768, return_tensors='pt')['input_ids']
+        tokens = tokenizer(text, truncation=True, max_length=2048, return_tensors='pt')['input_ids']
         
         url_image = "http://images.cocodataset.org/val2017/000000039769.jpg"
         image = Image.open(requests.get(url_image, stream=True).raw)

@@ -4,13 +4,13 @@
 # python train.py experiment=multimodal/test_multimodal
 
 defaults:
-  - override /datamodule: librispeech.yaml
+  - override /datamodule: cococaptions.yaml
   - override /model: flat_perceiver.yaml
   - override /callbacks: 
       - default.yaml
       - metrics.yaml
       - artifacts.yaml
-      # - media.yaml
+      - media.yaml
   - override /logger: wandb.yaml
   - override /trainer: default.yaml
 
@@ -20,21 +20,18 @@ defaults:
 # name of the run determines folder name in logs
 name: "flat_perceiver_librispeech"
 
-data_dir: E:/Datasets
-
 seed: 13579
 
 test: False
 
 trainer:
   gpus: 1
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 8
   min_epochs: 1
   max_epochs: 4096
   limit_val_batches: 0 # disable validation
   log_every_n_steps: 1
   num_sanity_val_steps: 10
-  # overfit_batches: 16
 
 model:
   switch_student_teacher_per_epoch: True
@@ -53,10 +50,9 @@ model:
     latent_loss_scale: 1
 
 datamodule:
-  split: "validation"
-  train_batch_size: 20
-  val_batch_size: 20
-  test_batch_size: 20
+  train_batch_size: 64
+  val_batch_size: 64
+  test_batch_size: 64
 
 logger:
   wandb:

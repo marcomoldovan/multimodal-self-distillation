@@ -131,10 +131,10 @@ class LibriSpeechDataModule(LightningDataModule):
         
         audio = self.feature_extractor(
             input_values,
-            pad_to_multiple_of=96, #TODO read from config
+            pad_to_multiple_of=96, 
             padding="longest",
             return_tensors="pt",
-            sampling_rate=16000, #TODO read from config
+            sampling_rate=16000, 
         )
         
         tokens = self.tokenizer(

@@ -4,5 +4,5 @@ data_dir: ${data_dir}/librispeech # data_dir is specified in train.yaml or test.
 train_batch_size: 128
 val_batch_size: 128
 test_batch_size: 128
-split: train.100
+split: train.360
 pin_memory: True

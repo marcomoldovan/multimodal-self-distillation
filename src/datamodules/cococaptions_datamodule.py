@@ -17,7 +17,7 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
         self.save_hyperparameters()
         
         self.align_fuse = [['text'], ['image']]
-        self.metric = 'Recall@k'
+        self.metric = ['Recall@k', 'MRR']
         
     def setup(self, stage: str):
         raise NotImplementedError
@@ -52,7 +52,7 @@ class COCOCaptionsDatamodule(pl.LightningDataModule):
     def test_dataloader(self):
         coco_test = ds.CocoCaptions(
             root=f'{self.hparams.data_dir}/test2014',
-            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json',
+            annFile=f'{self.hparams.data_dir}/annotations/captions_train2014.json', #!
             transform=transforms.ToTensor(),
         )
         return DataLoader(
