@@ -384,6 +384,7 @@ class HiPModel(nn.Module):
         is_training: bool = False,
         mask_time_prob: float = 0.05,
         mask_time_length: int = 10,
+        use_projection_head: bool = True,
         use_simsiam_mlp: bool = False
     ):
         super().__init__()
@@ -393,6 +394,7 @@ class HiPModel(nn.Module):
         self.pooler = Pooler(
             dim_in=self.hip.layers[-1].hidden_size, 
             projection_size=self.hip.layers[-1].hidden_size,
+            use_projection_head=use_projection_head,
             use_simsiam_mlp=use_simsiam_mlp
         )
         

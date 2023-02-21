@@ -511,6 +511,7 @@ class PerceiverModel(nn.Module):
         use_query_residual=True,
         mask_time_prob=0.05,
         mask_time_length=10,
+        use_projection_head=True,
         use_simsiam_projector=False,
         input_preprocessor: PreprocessorType = None,
     ):
@@ -566,6 +567,7 @@ class PerceiverModel(nn.Module):
             dim_in=d_latents, 
             projection_size=d_latents, 
             widening_factor=self_attention_widening_factor, 
+            use_projection_head=use_projection_head,
             use_simsiam_mlp=use_simsiam_projector
         )
     

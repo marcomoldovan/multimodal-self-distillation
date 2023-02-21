@@ -18,8 +18,10 @@ scheduler:
 criterion:
   _target_: src.models.components.criterion.LatentPredictionLoss
   num_hidden_layers_to_predict: 3
+  use_latent_loss: True
   reduction: 'mean'
   beta: 1.0
+  use_align_loss: True
   sim_loss_weight: 25.0
   var_loss_weight: 25.0
   cov_loss_weight: 1.0
@@ -46,6 +48,7 @@ model:
   use_query_residual: True
   mask_time_prob: 0.05
   mask_time_length: 10
+  use_projection_head: True
   use_simsiam_projector: False
 
   input_preprocessor:

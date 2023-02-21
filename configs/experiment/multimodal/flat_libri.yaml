@@ -28,13 +28,13 @@ test: False
 
 trainer:
   gpus: 1
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 8
   min_epochs: 1
   max_epochs: 4096
   limit_val_batches: 0 # disable validation
   log_every_n_steps: 1
   num_sanity_val_steps: 10
-  # overfit_batches: 16
+  overfit_batches: 16
 
 model:
   switch_student_teacher_per_epoch: True
@@ -47,16 +47,18 @@ model:
     num_self_attends_per_block: 8
     cross_attention_widening_factor: 2
     self_attention_widening_factor: 2
+    use_projection_head: False
     use_simsiam_projector: False
   criterion:
     aggregation: "mean"
     latent_loss_scale: 1
+    use_align_loss: False
 
 datamodule:
   split: "validation"
-  train_batch_size: 20
-  val_batch_size: 20
-  test_batch_size: 20
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 16
 
 logger:
   wandb:
@@ -73,6 +75,6 @@ callbacks:
   watch_model:
     log: "all"
     log_freq: 1
-  log_media:
-    log_every_n_steps: 10
+  # log_media:
+  #   log_every_n_steps: 10
 

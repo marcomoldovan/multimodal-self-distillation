@@ -10,6 +10,7 @@ class LatentPredictionLoss(nn.Module):
     def __init__(
         self,
         num_hidden_layers_to_predict: int,
+        use_latent_loss: bool = True,
         reduction: str = "none",
         aggregation: str = "mean",
         beta: float = 1.0,
@@ -19,11 +20,14 @@ class LatentPredictionLoss(nn.Module):
         layer_norm_target_layer: bool = True,
         layer_norm_targets: bool = True,
         instance_norm_targets: bool = True,
+        use_align_loss: bool = True,
         sim_loss_weight: float = 25.0,
         var_loss_weight: float = 25.0,
         cov_loss_weight: float = 1.0,
         ) -> None:
         super().__init__()
+        
+        self.use_latent_loss = use_latent_loss
         
         self.has_faiss_format = False
         self.batch_norm_target_layer = batch_norm_target_layer
@@ -37,6 +41,7 @@ class LatentPredictionLoss(nn.Module):
         self.beta = beta
         self.latent_loss_scale = latent_loss_scale
         
+        self.use_align_loss = use_align_loss
         self.align_loss_fn = VICRegLoss(sim_loss_weight, var_loss_weight, cov_loss_weight)
         
         self.k = num_hidden_layers_to_predict
@@ -100,16 +105,22 @@ class LatentPredictionLoss(nn.Module):
                         x.float(), y.float(), reduction=self.reduction, beta=self.beta
                     ).sum(dim=-1)
         
-        if self.aggregation == 'mean':
-            latent_loss = latent_loss.mean() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.mean() * self.latent_loss_scale
-        elif self.aggregation == 'sum':
-            latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
+        if self.use_latent_loss:
+            if self.aggregation == 'mean':
+                latent_loss = latent_loss.mean() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.mean() * self.latent_loss_scale
+            elif self.aggregation == 'sum':
+                latent_loss = latent_loss.sum() / math.sqrt(sz) if self.latent_loss_scale <= 0 else latent_loss.sum() * self.latent_loss_scale
+        else:
+            latent_loss = 0
+             
         
-        #TODO add option of not using pooler loss at all to see if it's dominating convergence
-        # pooler loss (batch size, hidden size)                
-        x_pooler = fwd_output.student_output.pooler_output
-        y_pooler = fwd_output.teacher_output.pooler_output
-        align_loss = self.align_loss_fn(x_pooler, y_pooler)
+        if self.use_align_loss:
+            # align loss (batch size, hidden size)                
+            x_pooler = fwd_output.student_output.pooler_output
+            y_pooler = fwd_output.teacher_output.pooler_output
+            align_loss = self.align_loss_fn(x_pooler, y_pooler)
+        else:
+            align_loss = 0 
         
         total_loss = latent_loss + align_loss
         

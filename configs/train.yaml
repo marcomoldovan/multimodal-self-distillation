@@ -9,7 +9,7 @@ defaults:
       - default.yaml
       - artifacts.yaml
       - metrics.yaml
-      - media.yaml
+      # - media.yaml
   - profiler: default.yaml
   - logger: wandb.yaml 
   - trainer: default.yaml
