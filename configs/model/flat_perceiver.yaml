@@ -3,6 +3,7 @@ ema_decay: 0.999
 ema_end_decay: 0.9999
 ema_anneal_end_step: 300000
 switch_student_teacher_per_epoch: false
+scheduler_interval: epoch
 
 optimizer:
   _target_: torch.optim.Adam
@@ -11,9 +12,19 @@ optimizer:
   weight_decay: 0.0005
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+  _target_: torch.optim.lr_scheduler.OneCycleLR
   _partial_: true
-  T_0: 10
+  max_lr : 0.05
+  epochs: 1024
+  steps_per_epoch: 168
+  pct_start: 0.1
+  div_factor: 25.0
+  final_div_factor: 10000.0
+
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+#   _partial_: true
+#   T_0: 10
 
 criterion:
   _target_: src.models.components.criterion.LatentPredictionLoss

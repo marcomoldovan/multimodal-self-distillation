@@ -1,10 +1,10 @@
 # @package _global_
 
 # to execute this experiment run:
-# python train.py experiment=multimodal/test_multimodal
+# python train.py experiment=example
 
 defaults:
-  - override /datamodule: librispeech.yaml
+  - override /datamodule: tinyimagenet.yaml
   - override /model: flat_perceiver.yaml
   - override /callbacks: 
       - default.yaml
@@ -18,19 +18,15 @@ defaults:
 # this allows you to overwrite only specified parameters
 
 # name of the run determines folder name in logs
-name: "flat_perceiver_librispeech"
+name: "flat_perceiver_tinyimagenet"
 
-data_dir: E:/Datasets
-
-seed: 13579
-
-test: False
+seed: 24680
 
 trainer:
   gpus: 1
   accumulate_grad_batches: 8
   min_epochs: 1
-  max_epochs: 1024
+  max_epochs: 4096
   limit_val_batches: 0 # disable validation
   log_every_n_steps: 1
   num_sanity_val_steps: 10
@@ -38,7 +34,6 @@ trainer:
 
 model:
   switch_student_teacher_per_epoch: True
-  scheduler_interval: step # set to 'step' to use OneCycleLR
   optimizer:
     lr: 0.01
   model:
@@ -56,29 +51,15 @@ model:
     use_latent_loss: True
     use_align_loss: True
   scheduler:
-    steps_per_epoch: 21 # because of gradient accumulation
+    T_0: 1024
 
 datamodule:
-  split: "validation"
-  train_batch_size: 16
-  val_batch_size: 16
-  test_batch_size: 16
+  train_batch_size: 64
+  val_batch_size: 64
+  test_batch_size: 64
 
 logger:
   wandb:
-    project: "multimodal-self-distillation"
-    prefix: "flat_librispeech"
-    tags: ["multimodal", "librispeech", "flat", "${name}"]
-
-callbacks:
-  log_metrics:
-    top_k: [1, 5, 100]
-    logging_interval: 1
-    on_step: False
-    on_epoch: True
-  watch_model:
-    log: "all"
-    log_freq: 1
-  # log_media:
-  #   log_every_n_steps: 10
-
+    project: "unimodal-self-distillation"
+    prefix: "flat_tinyimagenet"
+    tags: ["unimodal", "tinyimagenet", "${name}"]
