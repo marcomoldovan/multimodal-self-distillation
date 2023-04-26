@@ -59,6 +59,7 @@ logger:
     project: "multimodal-self-distillation"
     prefix: "flat_librispeech"
     tags: ["multimodal", "librispeech", "flat", "${name}"]
+    group: "flat_mscoco"
 
 callbacks:
   log_metrics:

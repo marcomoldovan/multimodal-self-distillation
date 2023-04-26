@@ -38,7 +38,8 @@ trainer:
 
 model:
   switch_student_teacher_per_epoch: True
-  scheduler_interval: step # set to 'step' to use OneCycleLR
+  scheduler_monitor: 'train/recall@5_on_step' #! set to a metric if using ReduceLROnPlateau, else keep as 'train/total_loss'
+  scheduler_interval: step #! set to 'step' to use OneCycleLR, otherwise 'epoch' for CosineAnnealingWarmRestarts
   optimizer:
     lr: 0.01
   model:
@@ -57,6 +58,8 @@ model:
     use_align_loss: True
   scheduler:
     steps_per_epoch: 21 # because of gradient accumulation
+    pct_start: 0.375
+    epochs: 256
 
 datamodule:
   split: "validation"
@@ -68,9 +71,13 @@ logger:
   wandb:
     project: "multimodal-self-distillation"
     prefix: "flat_librispeech"
-    tags: ["multimodal", "librispeech", "flat", "${name}"]
+    tags: ["multimodal", "librispeech", "flat", "${name}", "OneCycleLR"]
+    group: "flat_librispeech"
 
 callbacks:
+  model_checkpoint:
+    monitor: "train/recall@5_on_step"
+    mode: "max"
   log_metrics:
     top_k: [1, 5, 100]
     logging_interval: 1

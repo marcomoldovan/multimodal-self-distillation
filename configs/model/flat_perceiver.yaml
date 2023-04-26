@@ -3,6 +3,7 @@ ema_decay: 0.999
 ema_end_decay: 0.9999
 ema_anneal_end_step: 300000
 switch_student_teacher_per_epoch: false
+scheduler_monitor: 'train/total_loss'
 scheduler_interval: epoch
 
 optimizer:
@@ -14,7 +15,7 @@ optimizer:
 scheduler:
   _target_: torch.optim.lr_scheduler.OneCycleLR
   _partial_: true
-  max_lr : 0.05
+  max_lr : 0.01
   epochs: 1024
   steps_per_epoch: 168
   pct_start: 0.1
@@ -25,6 +26,15 @@ scheduler:
 #   _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
 #   _partial_: true
 #   T_0: 10
+
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: true
+#   mode: 'max'
+#   factor: 0.5
+#   patience: 5
+#   threshold: 0.0001
+
 
 criterion:
   _target_: src.models.components.criterion.LatentPredictionLoss
