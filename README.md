@@ -18,13 +18,13 @@
 We want to generalize the self-distillation learning paradigm so that it applied to any kind of unimodal or fused multimodal data without the need of modality-specific augmentation or masking strategies. Instead we embed the input data into a universal input array and apply a single masking strategy in the latent space instead of the data space. We test this genealized apporach on a multitude of datasets containing text, images, audio and video data.
 
 ## How to run
-
+#TODO update this section to run with poetry
 Install dependencies
 
 ```bash
 # clone project
-git clone https://github.com/marcomoldovan/cross-modal-speech-segment-retrieval
-cd cross-modal-speech-segment-retrieval
+git clone https://github.com/marcomoldovan/multimodal-self-distillation
+cd multimodal-self-distillation
 
 # install the correct python version
 sudo apt-get install python3.10 # Linux, Python 3.7 or higher
@@ -97,8 +97,8 @@ Install dependencies
 
 ```bash
 # clone project
-git clone https://github.com/marcomoldovan/cross-modal-speech-segment-retrieval
-cd cross-modal-speech-segment-retrieval
+git clone https://github.com/marcomoldovan/multimodal-self-distillation
+cd multimodal-self-distillation
 
 # install the correct python version
 sudo apt-get install python3.10 # Linux, Python 3.7 or higher
