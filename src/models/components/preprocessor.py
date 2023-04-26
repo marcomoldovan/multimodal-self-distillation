@@ -96,12 +96,6 @@ class PerceiverTextPreprocessor(AbstractPreprocessor):
         self.d_model = d_model
         self.embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=d_model)
         self.position_embeddings = nn.Embedding(max_position_embeddings, d_model)
-        
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #TODO the following line will probably break multi-GPU training, can we fix it?
-        # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        # self.embeddings.to(device)
-        # self.position_embeddings.to(device)
 
     @property
     def num_channels(self) -> int:
@@ -513,7 +507,7 @@ class PerceiverMultimodalPreprocessor(AbstractPreprocessor):
 
     def __init__(
         self,
-        modalities: Mapping[str, PreprocessorType],
+        modalities: Mapping[str, PreprocessorType], #TODO should this be a nn.ModuleDict? Might be the reason why proper device is not set 
         mask_probs: Optional[Mapping[str, float]] = None,
         min_padding_size: int = 2,
     ):

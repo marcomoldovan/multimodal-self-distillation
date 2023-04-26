@@ -35,6 +35,7 @@ class LatentPredictionPretraining(pl.LightningModule):
         ema_end_decay: float = 0.9999,
         ema_anneal_end_step: int = 300000,
         switch_student_teacher_per_epoch: bool = False,
+        scheduler_monitor: str = "train/total_loss",
         scheduler_interval: str = "epoch",
     ):
         super().__init__()
@@ -197,7 +198,7 @@ class LatentPredictionPretraining(pl.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "train/loss",
+                "monitor": self.hparams.scheduler_monitor,
                 "interval": self.hparams.scheduler_interval,
                 "frequency": 1,
             },
